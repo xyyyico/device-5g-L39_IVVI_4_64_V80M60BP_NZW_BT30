@@ -7,7 +7,9 @@ DEVICE_PATH := device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30
 # For building with minimal manifest
 ALLOW_MISSING_DEPENDENCIES := true
 
-# A/B
+# ----------------------------
+# A/B + Recovery-as-Boot 核心配置（已完美适配）
+# ----------------------------
 AB_OTA_UPDATER := true
 AB_OTA_PARTITIONS += \
     system \
@@ -16,7 +18,33 @@ AB_OTA_PARTITIONS += \
     vbmeta_system \
     vbmeta_vendor \
     boot
+
+# 关键：让 boot 分区同时支持 安卓系统 + recovery
 BOARD_USES_RECOVERY_AS_BOOT := true
+TARGET_NO_RECOVERY := true
+TARGET_RECOVERY_IN_BOOT_IMAGE := true
+BOARD_HAS_NO_RECOVERY_PARTITION := true
+BOARD_BUILD_RECOVERY_IMAGE := false
+BOARD_INCLUDE_RECOVERY_RAMDISK_IN_BOOT := true
+
+# 动态分区必须
+BOARD_USES_METADATA_PARTITION := true
+TARGET_RECOVERY_USE_QEMU_STORAGE := true
+
+# AB OTA 配置
+AB_OTA_POSTINSTALL_CONFIG += \
+    RUN_POSTINSTALL_system=true \
+    POSTINSTALL_PATH_system=system/bin/otapreopt_script \
+    FILESYSTEM_TYPE_system=ext4 \
+    POSTINSTALL_OPTIONAL_system=true
+
+# ----------------------------------------------------------------
+# 🔥 已加入：第一阶段 ramdisk（让 boot 能正常启动安卓系统！）
+# ----------------------------------------------------------------
+BOARD_USES_FIRST_STAGE_RAMDISK := true
+TARGET_NO_FIRST_STAGE_RAMDISK := false
+BOARD_GENERIC_RAMDISK_OUT := $(DEVICE_PATH)/ramdisk
+BOARD_MOUNT_GENERIC_RAMDISK := true
 
 # Architecture
 TARGET_ARCH := arm64
@@ -55,7 +83,7 @@ BOARD_MKBOOTIMG_ARGS += --ramdisk_offset $(BOARD_RAMDISK_OFFSET)
 BOARD_MKBOOTIMG_ARGS += --tags_offset $(BOARD_KERNEL_TAGS_OFFSET)
 BOARD_KERNEL_IMAGE_NAME := Image
 
-# Prebuilt Kernel【路径匹配：机型文件夹内prebuilt】
+# Prebuilt Kernel
 TARGET_FORCE_PREBUILT_KERNEL := true
 ifeq ($(TARGET_FORCE_PREBUILT_KERNEL),true)
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel
@@ -63,19 +91,23 @@ TARGET_PREBUILT_DTB := $(DEVICE_PATH)/prebuilt/dtb.img
 BOARD_MKBOOTIMG_ARGS += --dtb $(TARGET_PREBUILT_DTB)
 BOARD_SKIP_ANDROID_DTB_BUILD := true
 endif
-# 禁用源码内核
+
 TARGET_KERNEL_SOURCE :=
 TARGET_KERNEL_CONFIG :=
 
 # Partitions
 BOARD_FLASH_BLOCK_SIZE := 131072
 BOARD_BOOTIMAGE_PARTITION_SIZE := 33554432
-BOARD_RECOVERYIMAGE_PARTITION_SIZE := 33554432
+
+# 重要：因为无 recovery 分区，必须删掉这个
+# BOARD_RECOVERYIMAGE_PARTITION_SIZE := 33554432
+
 BOARD_HAS_LARGE_FILESYSTEM := true
 BOARD_SYSTEMIMAGE_PARTITION_TYPE := ext4
 BOARD_USERDATAIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE := ext4
 TARGET_COPY_OUT_VENDOR := vendor
+
 BOARD_SUPER_PARTITION_SIZE := 9126805504
 BOARD_SUPER_PARTITION_GROUPS := 5g_dynamic_partitions
 BOARD_5G_DYNAMIC_PARTITIONS_PARTITION_LIST := system vendor product
@@ -100,7 +132,7 @@ PLATFORM_SECURITY_PATCH := 2099-12-31
 VENDOR_SECURITY_PATCH := 2099-12-31
 PLATFORM_VERSION := 16.1.0
 
-# TWRP OF config
+# TWRP / OrangeFox
 TW_THEME := portrait_hdpi
 TW_EXTRA_LANGUAGES := true
 TW_SCREEN_BLANK_ON_BOOT := true
@@ -108,11 +140,17 @@ TW_INPUT_BLACKLIST := "hbtp_vm"
 TW_USE_TOOLBOX := true
 TW_INCLUDE_REPACKTOOLS := true
 
-# Brightness
 TW_MAX_BRIGHTNESS := 2047
 TW_DEFAULT_BRIGHTNESS := 1024
 TW_BRIGHTNESS_PATH := /sys/class/leds/lcd-backlight/brightness
 
-# OrangeFox
+# --------------------------
+# 🔥 加在这里：MTP 修复配置
+# --------------------------
+TW_MTP_DEVICE := /sdcard
+TW_USB_VENDOR_ID := 0x0e8d
+TW_USB_PRODUCT_ID := 0x201c
+TW_USE_MODEL_HARDWARE_ID_FOR_USB := true
+
 OF_MAINTAINER := xy
 OF_NO_ADDON := true
