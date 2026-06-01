@@ -1,0 +1,41 @@
+#
+# Copyright (C) 2026 The Android Open Source Project
+# Copyright (C) 2026 SebaUbuntu's TWRP device tree generator
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Inherit from those products. Most specific first.
+$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
+$(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
+
+# 【路径已完全修正】
+$(call inherit-product, device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30/device.mk)
+
+# OrangeFox 配置
+OF_MAINTAINER := "pipi"
+OF_TWRP_COMPATIBILITY_MODE := 1
+OF_SUPPORT_ALL_BLOCK_OTA := 1
+OF_DISABLE_MIUI_SPECIFIC_FEATURES := 1
+OF_FLASHLIGHT_ENABLE := 1
+OF_SCREEN_H := 2340
+OF_STATUS_H := 80
+OF_STATUS_INDENT_LEFT := 48
+OF_STATUS_INDENT_RIGHT := 48
+OF_ALLOW_DISABLE_NAVBAR := 0
+OF_CLOCK_POS := 1
+OF_USE_MAGISKBOOT := 1
+OF_USE_MAGISKBOOT_FOR_ALL_PATCHES := 1
+OF_DONT_PATCH_ENCRYPTED_DEVICE := 1
+OF_NO_TREBLE_COMPATIBILITY_CHECK := 1
+OF_PATCH_AVB20 := 1
+OF_FBE_METADATA_MOUNT_IGNORE := 1
+
+# 设备信息
+PRODUCT_DEVICE := L39_IVVI_4_64_V80M60BP_NZW_BT30
+PRODUCT_NAME := twrp_L39_IVVI_4_64_V80M60BP_NZW_BT30
+PRODUCT_BRAND := 5G
+PRODUCT_MODEL := 20221212A
+PRODUCT_MANUFACTURER := 5g
+
+BUILD_FINGERPRINT := 5G/20221212A/L39:11/RP1A.200720.011/1708419017:user/release-keys
