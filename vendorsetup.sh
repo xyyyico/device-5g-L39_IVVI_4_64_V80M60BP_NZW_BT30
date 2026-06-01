@@ -5,6 +5,4 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-add_lunch_combo omni_L39_IVVI_4_64_V80M60BP_NZW_BT30-user
-add_lunch_combo omni_L39_IVVI_4_64_V80M60BP_NZW_BT30-userdebug
-add_lunch_combo omni_L39_IVVI_4_64_V80M60BP_NZW_BT30-eng
+# 旧语法已废弃，已改用 AndroidProducts.mk
