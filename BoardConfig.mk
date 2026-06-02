@@ -15,12 +15,12 @@ ALLOW_MISSING_DEPENDENCIES := true
 AB_OTA_UPDATER := true
 # 参与 A/B 升级的分区列表
 AB_OTA_PARTITIONS += \
-    system \
-    product \
-    vendor \
-    vbmeta_system \
-    vbmeta_vendor \
-    boot
+	system \
+	product \
+	vendor \
+	vbmeta_system \
+	vbmeta_vendor \
+	boot
 
 # 关键：使用 Boot 分区同时承载 Android 系统和 Recovery（无独立 Recovery 分区）
 BOARD_USES_RECOVERY_AS_BOOT := true
@@ -42,10 +42,10 @@ TARGET_RECOVERY_USE_QEMU_STORAGE := true
 
 # A/B 系统 OTA 后安装优化脚本配置
 AB_OTA_POSTINSTALL_CONFIG += \
-    RUN_POSTINSTALL_system=true \
-    POSTINSTALL_PATH_system=system/bin/otapreopt_script \
-    FILESYSTEM_TYPE_system=ext4 \
-    POSTINSTALL_OPTIONAL_system=true
+	RUN_POSTINSTALL_system=true \
+	POSTINSTALL_PATH_system=system/bin/otapreopt_script \
+	FILESYSTEM_TYPE_system=ext4 \
+	POSTINSTALL_OPTIONAL_system=true
 
 # ----------------------------------------------------------------
 # 第一阶段 ramdisk 配置（保证 boot 分区能正常启动安卓系统）
