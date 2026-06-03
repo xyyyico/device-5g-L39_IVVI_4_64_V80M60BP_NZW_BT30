@@ -1,0 +1,28 @@
+name: Build OrangeFox Patch Boot (在线下载boot自动修补)
+on:
+  workflow_dispatch:
+
+env:
+  FOX_BRANCH: "12.1"
+  DEVICE_CODENAME: "L39_IVVI_4_64_V80M60BP_NZW_BT30"
+  DT_REPO: "xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30"
+  DT_BRANCH: "main"
+  BUILD_TARGET: "recoveryimage"
+  ALLOW_MISSING_DEPENDENCIES: true
+  FOX_BUILD_DEVICE: ${{ env.DEVICE_CODENAME }}
+  FOX_PATCH_STOCK_BOOT: true
+  STOCK_BOOT_DL_URL: "https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30/releases/download/stock/boot.img"
+  STOCK_BOOT_PATH: prebuilt/stock/boot.img
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Build OrangeFox + Auto Patch Boot
+        uses: azwhikaru/orangefox-builder-action@main
+        with:
+          fox_branch: ${{ env.FOX_BRANCH }}
+          dt_link: https://github.com/${{ env.DT_REPO }}.git
+          dt_branch: ${{ env.DT_BRANCH }}
+          build_target: ${{ env.BUILD_TARGET }}
+          shallow_clone: true
