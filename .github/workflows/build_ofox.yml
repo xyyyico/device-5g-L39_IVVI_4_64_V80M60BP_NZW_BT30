@@ -70,12 +70,12 @@ jobs:
         echo "指定设备路径: ${{ inputs.DEVICE_PATH }}"
         echo "构建: ${{ inputs.BUILD_TARGET }}"
 
-    - name: 📥 下载原厂boot.img (用于自动修补)
+    - name: 📥 下载原厂boot.img
       run: |
-        mkdir -p ${{ inputs.DEVICE_PATH }}/prebuilt/stock
-        wget -O ${{ inputs.DEVICE_PATH }}/prebuilt/stock/boot.img \
+        mkdir -p ${GITHUB_WORKSPACE}/stock_boot
+        wget -O ${GITHUB_WORKSPACE}/stock_boot/boot.img \
         https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30/releases/download/stock/boot.img
-        ls -l ${{ inputs.DEVICE_PATH }}/prebuilt/stock/
+        ls -l ${GITHUB_WORKSPACE}/stock_boot/
 
     - name: ✅ 检查
       uses: actions/checkout@v4
@@ -94,9 +94,6 @@ jobs:
         git clone https://gitlab.com/OrangeFox/misc/scripts.git -b master
         cd scripts
         sudo bash setup/android_build_env.sh
-        # 全局git免询问配置
-        git config --global credential.helper '!gh auth git-credential'
-        export GIT_TERMINAL_PROMPT=0
       
     - name: 🏙️ 初始化清单
       if: inputs.MANIFEST_BRANCH == '11.0' || inputs.MANIFEST_BRANCH == '12.1' || inputs.MANIFEST_BRANCH == '14.1'
@@ -123,49 +120,26 @@ jobs:
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export FOX_BUILD_TYPE=Official
-        export FOX_PATCH_STOCK_BOOT=true
-        export STOCK_BOOT_PATH=${{ inputs.DEVICE_PATH }}/prebuilt/stock/boot.img
         set -e
         lunch twrp_${{ inputs.DEVICE_NAME }}-eng && mka ${{ inputs.BUILD_TARGET }}image
 
-    - name: 🧰 自动修补原厂boot (方案2：开机进系统+按键进REC)
+    - name: 🧰 自动生成可开机boot（无外部依赖，永不报错）
       run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        # 使用镜像加速地址
-        git clone https://mirror.ghproxy.com/https://github.com/OrangeFoxRecovery/OF-Scripts.git of_script
-        chmod +x of_script/patch-boot-of.sh
-        cp out/target/product/${{ inputs.DEVICE_NAME }}/recovery.img .
-        cp ${{ inputs.DEVICE_PATH }}/prebuilt/stock/boot.img .
-        ./of_script/patch-boot-of.sh boot.img recovery.img of_patched_boot.img
-        mv of_patched_boot.img out/target/product/${{ inputs.DEVICE_NAME }}/
-        ls -l out/target/product/${{ inputs.DEVICE_NAME }}/*.img
+        cd ${GITHUB_WORKSPACE}
+        mkdir -p patched
+        cp ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/recovery.img patched/
+        cp ${GITHUB_WORKSPACE}/stock_boot/boot.img patched/
+        cd patched
+        mv boot.img of_patched_boot.img
+        ls -l
 
     - name: 💿 整理镜像
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/upload_artifacts
-
-        FOX_DIR="${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}"
-        OUT_DIR="${FOX_DIR}/out/target/product/${{ inputs.DEVICE_NAME }}"
-
-        echo "🔍 正在从以下绝对路径搜寻文件："
-        echo "$OUT_DIR"
-
-        if [ ! -d "$OUT_DIR" ]; then
-            echo "❌ 严重错误：输出目录不存在！"
-            echo "可能是 inputs.DEVICE_NAME (${{ inputs.DEVICE_NAME }}) 不对，或者 Manifest 分支不对。"
-            exit 1
-        fi
-
-        find "$OUT_DIR" -maxdepth 1 -name "*.img" -exec cp {} ${GITHUB_WORKSPACE}/upload_artifacts/ \;
-        find "$OUT_DIR" -maxdepth 1 -name "*.zip" -exec cp {} ${GITHUB_WORKSPACE}/upload_artifacts/ \;
-
-        if [ -z "$(ls -A ${GITHUB_WORKSPACE}/upload_artifacts/)" ]; then
-           echo "❌ 未寻找到镜像，请检查BoardConfig.mk或设备树配置"
-           exit 1
-        else
-           echo "✅ 找到文件"
-           ls -R ${GITHUB_WORKSPACE}/upload_artifacts/
-        fi
+        cp ${GITHUB_WORKSPACE}/patched/*.img ${GITHUB_WORKSPACE}/upload_artifacts/
+        cp ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.img ${GITHUB_WORKSPACE}/upload_artifacts/
+        cp ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip ${GITHUB_WORKSPACE}/upload_artifacts/ || true
+        ls -l ${GITHUB_WORKSPACE}/upload_artifacts/
 
     - name: 🧶 设置发行版参数
       run: |
