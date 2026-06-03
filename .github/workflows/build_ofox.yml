@@ -9,7 +9,6 @@ env:
   DT_BRANCH: "main"
   BUILD_TARGET: "recoveryimage"
   ALLOW_MISSING_DEPENDENCIES: true
-  FOX_BUILD_DEVICE: ${{ env.DEVICE_CODENAME }}
   FOX_PATCH_STOCK_BOOT: true
   STOCK_BOOT_DL_URL: "https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30/releases/download/stock/boot.img"
   STOCK_BOOT_PATH: prebuilt/stock/boot.img
@@ -17,6 +16,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      FOX_BUILD_DEVICE: ${{ env.DEVICE_CODENAME }}
     steps:
       - name: Build OrangeFox + Auto Patch Boot
         uses: azwhikaru/orangefox-builder-action@main
