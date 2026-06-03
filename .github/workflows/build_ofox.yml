@@ -1,4 +1,4 @@
-name: Build OrangeFox Patch Boot
+name: Build OrangeFox + Patch Boot
 on:
   workflow_dispatch:
 
@@ -7,18 +7,18 @@ env:
   DEVICE_CODENAME: "L39_IVVI_4_64_V80M60BP_NZW_BT30"
   DT_REPO: "xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30"
   DT_BRANCH: "main"
-  FOX_PATCH_STOCK_BOOT: true
-  STOCK_BOOT_DL_URL: "https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30/releases/download/stock/boot.img"
+  STOCK_BOOT_URL: "https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30/releases/download/stock/boot.img"
   ALLOW_MISSING_DEPENDENCIES: true
 
 jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-      - name: 编译橙狐+自动修补boot
-        uses: momo54181/Lazy_Action-Recoverys-Builder@main
+      - name: 编译橙狐+自动修补原厂boot
+        uses: kinguser981/OrangeFox-Recovery-Builder-2024@main
         with:
-          build_type: OFRP
-          fox_branch: 12.1
-          dt_url: https://github.com/${{ env.DT_REPO }}.git
-          dt_branch: ${{ env.DT_BRANCH }}
+          fox_branch: "12.1"
+          device_tree: "https://github.com/${{ env.DT_REPO }}.git"
+          dt_branch: "${{ env.DT_BRANCH }}"
+          stock_boot_link: "${{ env.STOCK_BOOT_URL }}"
+          patch_stock_boot: true
