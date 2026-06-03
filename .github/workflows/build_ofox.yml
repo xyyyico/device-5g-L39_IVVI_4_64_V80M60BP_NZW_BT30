@@ -50,17 +50,6 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: write
-    defaults:
-      run:
-        shell: bash
-        # 全局配置：任何run命令异常→休眠24小时(86400秒)，暂停任务
-        run: |
-          {
-            ${{ '{0}' }}
-          } || {
-            echo -e "\033[31m====任务异常，进入24h休眠，修改代码提交后点【重新运行此作业】继续====\033[0m"
-            sleep 86400
-          }
     steps:
     - name: 🧱 构建配置
       run: |
@@ -114,13 +103,16 @@ jobs:
         rm -rf ./${{ inputs.DEVICE_PATH }}
         git clone ${{ inputs.DEVICE_TREE }} -b ${{ inputs.DEVICE_TREE_BRANCH }} ./${{ inputs.DEVICE_PATH }}
 
-    - name: 🦊 编译OrangeFox REC
+    - name: 🦊 编译OrangeFox REC（报错休眠24h）
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export FOX_BUILD_TYPE=Official
-        lunch twrp_${{ inputs.DEVICE_NAME }}-eng && mka ${{ inputs.BUILD_TARGET }}image
+        lunch twrp_${{ inputs.DEVICE_NAME }}-eng && mka ${{ inputs.BUILD_TARGET }}image || {
+          echo "====编译出错，休眠24小时，修改vendorsetup.sh提交后重新运行作业===="
+          sleep 86400
+        }
 
     - name: 💿 整理全部镜像(容错不报错)
       run: |
