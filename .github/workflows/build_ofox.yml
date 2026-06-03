@@ -97,23 +97,23 @@ jobs:
         cd sync
         ./orangefox_sync.sh --branch ${{ inputs.MANIFEST_BRANCH }} --path ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
 
-    - name: 🌳 拉取设备树
+    - name: 🌳 克隆设备树
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        rm -rf ./${{ inputs.DEVICE_PATH }}
         git clone ${{ inputs.DEVICE_TREE }} -b ${{ inputs.DEVICE_TREE_BRANCH }} ./${{ inputs.DEVICE_PATH }}
+        cd ${{ inputs.DEVICE_PATH }}
+        echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
-    - name: 🦊 编译OrangeFox REC（出错休眠24h）
+       - name: 🦊 构建OrangeFox
       run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH}}
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export FOX_BUILD_TYPE=Official
-        lunch twrp_${{ inputs.DEVICE_NAME }}-eng && mka ${{ inputs.BUILD_TARGET }}image || {
-          echo "====编译出错，休眠24小时，修改vendorsetup.sh提交后重新运行作业===="
-          sleep 86400
-        }
+        lunch twrp_${{ inputs.DEVICE_NAME}}-eng
+        mka ${{ inputs.BUILD_TARGET }}image
 
+        
     - name: 💿 整理全部镜像(容错不报错)
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/upload_artifacts
