@@ -16,14 +16,12 @@ env:
 jobs:
   build:
     runs-on: ubuntu-22.04
-    env:
-      FOX_BUILD_DEVICE: ${{ env.DEVICE_CODENAME }}
     steps:
       - name: Build OrangeFox + Auto Patch Boot
         uses: azwhikaru/orangefox-builder-action@main
         with:
-          fox_branch: ${{ env.FOX_BRANCH }}
-          dt_link: https://github.com/${{ env.DT_REPO }}.git
-          dt_branch: ${{ env.DT_BRANCH }}
-          build_target: ${{ env.BUILD_TARGET }}
+          fox_branch: "12.1"
+          dt_link: "https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30.git"
+          dt_branch: "main"
+          build_target: "recoveryimage"
           shallow_clone: true
