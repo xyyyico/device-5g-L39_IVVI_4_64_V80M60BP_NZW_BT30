@@ -104,16 +104,15 @@ jobs:
         cd ${{ inputs.DEVICE_PATH }}
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
-       - name: 🦊 构建OrangeFox
+    - name: 🦊 构建OrangeFox
       run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH}}
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export FOX_BUILD_TYPE=Official
-        lunch twrp_${{ inputs.DEVICE_NAME}}-eng
+        lunch twrp_${{ inputs.DEVICE_NAME }}-eng
         mka ${{ inputs.BUILD_TARGET }}image
 
-        
     - name: 💿 整理全部镜像(容错不报错)
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/upload_artifacts
