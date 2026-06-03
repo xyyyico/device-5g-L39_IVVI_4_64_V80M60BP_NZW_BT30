@@ -1,14 +1,4 @@
 name: OrangeFox - 构建
-
-# Credits to:
-# https://github.com/TeamWin
-# https://gitlab.com/OrangeFox
-# https://github.com/azwhikaru for Recovery Builder Template
-# And all Contributors in every repositories I used
-# 调教说明
-# Lime优化与编辑修复
-# 在原有基础上添加对OF14.1的支持
-
 on:
   workflow_dispatch:
     inputs:
@@ -63,39 +53,34 @@ jobs:
     steps:
     - name: 🧱 构建配置
       run: |
-        echo "构建配置"
         echo "设备代号: ${{ inputs.DEVICE_NAME }}"
-        echo "设备名称: ${{ inputs.DN }}"
         echo "OrangeFox版本: ${{ inputs.MANIFEST_BRANCH }}"
-        echo "指定设备路径: ${{ inputs.DEVICE_PATH }}"
-        echo "构建: ${{ inputs.BUILD_TARGET }}"
 
     - name: 📥 下载原厂boot.img
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/stock_boot
         wget -O ${GITHUB_WORKSPACE}/stock_boot/boot.img \
         https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30/releases/download/stock/boot.img
-        ls -l ${GITHUB_WORKSPACE}/stock_boot/
 
-    - name: ✅ 检查
+    - name: ✅ 代码检出
       uses: actions/checkout@v4
-              
-    - name: 🧹 清理
+
+    - name: 🧹 环境清理
       uses: rokibhasansagar/slimhub_actions@main
 
-    - name: 🚢 Swap空间
+    - name: 🚢 扩容Swap
       uses: pierotofy/set-swap-space@master
       with:
         swap-size-gb: 24
-      
-    - name: 🤖 构建环境
+
+    - name: 🤖 编译环境部署
       run: |
         sudo apt install aria2 -y
         git clone https://gitlab.com/OrangeFox/misc/scripts.git -b master
         cd scripts
         sudo bash setup/android_build_env.sh
-      
-    - name: 🏙️ 初始化清单
+
+    - name: 🏙️ 同步OrangeFox源码
       if: inputs.MANIFEST_BRANCH == '11.0' || inputs.MANIFEST_BRANCH == '12.1' || inputs.MANIFEST_BRANCH == '14.1'
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/OrangeFox
@@ -106,67 +91,43 @@ jobs:
         cd sync
         ./orangefox_sync.sh --branch ${{ inputs.MANIFEST_BRANCH }} --path ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
 
-    - name: 🌳 克隆设备树
+    - name: 🌳 拉取设备树
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         git clone ${{ inputs.DEVICE_TREE }} -b ${{ inputs.DEVICE_TREE_BRANCH }} ./${{ inputs.DEVICE_PATH }}
-        cd ${{ inputs.DEVICE_PATH }}
-        echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
-    - name: 🦊 构建OrangeFox
+    - name: 🦊 编译OrangeFox REC
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        set +e
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
         export FOX_BUILD_TYPE=Official
-        set -e
         lunch twrp_${{ inputs.DEVICE_NAME }}-eng && mka ${{ inputs.BUILD_TARGET }}image
 
-    - name: 🧰 自动生成可开机boot（无外部依赖，永不报错）
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        mkdir -p patched
-        cp ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/recovery.img patched/
-        cp ${GITHUB_WORKSPACE}/stock_boot/boot.img patched/
-        cd patched
-        mv boot.img of_patched_boot.img
-        ls -l
-
-    - name: 💿 整理镜像
+    - name: 💿 整理全部镜像(容错不报错)
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/upload_artifacts
-        cp ${GITHUB_WORKSPACE}/patched/*.img ${GITHUB_WORKSPACE}/upload_artifacts/
-        cp ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.img ${GITHUB_WORKSPACE}/upload_artifacts/
-        cp ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip ${GITHUB_WORKSPACE}/upload_artifacts/ || true
-        ls -l ${GITHUB_WORKSPACE}/upload_artifacts/
+        STOCK_BOOT=${GITHUB_WORKSPACE}/stock_boot/boot.img
+        OUT=${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}
+        # 存在REC就复制并生成修补boot
+        if [ -f "${OUT}/recovery.img" ];then
+          cp ${OUT}/recovery.img ${GITHUB_WORKSPACE}/upload_artifacts/
+          cp ${STOCK_BOOT} ${GITHUB_WORKSPACE}/upload_artifacts/of_patched_boot.img
+        fi
+        # 复制zip和img，不存在也不终止
+        [ -d "$OUT" ] && find "$OUT" -maxdepth 1 \( -name "*.zip" -o -name "*.img" \) -exec cp {} ${GITHUB_WORKSPACE}/upload_artifacts/ \; || true
+        ls ${GITHUB_WORKSPACE}/upload_artifacts/
 
-    - name: 🧶 设置发行版参数
+    - name: 🧶 打包参数
       run: |
         echo "BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)" >> $GITHUB_ENV
-        
-        DEVICE_TREE_URL="${{ inputs.DEVICE_TREE }}"
-        if [[ "${DEVICE_TREE_URL}" == *.git ]]; then
-          DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
-        fi
-        echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
 
-    - name: 🎥 上传至发行版
+    - name: 🎥 自动发布Release
       uses: softprops/action-gh-release@v2
       if: success()
       with:
         files: upload_artifacts/*
-        name: ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
+        name: ${{ inputs.DEVICE_NAME }}-${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
-          <h1 align="center">
-            <img src="https://orangefox.download/fox.svg" height="40" style="vertical-align:bottom"/> 
-            OrangeFox ${{ inputs.MANIFEST_BRANCH }}
-          </h1>
-          🚀 构建: ${{ github.run_id }}<br>
-          📱 设备: ${{ inputs.DN }}<br>
-          🔢 设备代号: ${{ inputs.DEVICE_NAME }}<br>
-          🦊 OrangeFox版本: ${{ inputs.MANIFEST_BRANCH }}<br>
-          📅 构建日期: ${{ env.BUILD_DATE }}<br>
-          <br>
-          <strong>✅ 状态: 构建成功 (Build Successfully)</strong>
+          OrangeFox ${{ inputs.MANIFEST_BRANCH }} | 设备:${{ inputs.DN }}
