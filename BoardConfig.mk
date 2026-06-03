@@ -9,7 +9,7 @@ DEVICE_PATH := device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30
 ALLOW_MISSING_DEPENDENCIES := true
 
 # ----------------------------
-# A/B 分区 + Recovery 内置到 Boot 分区核心配置
+# A/B 分区 + kexec按键进OF（方案2：原生boot保留安卓，按键kexec跳REC）
 # ----------------------------
 AB_OTA_UPDATER := true
 AB_OTA_PARTITIONS += \
@@ -20,26 +20,21 @@ AB_OTA_PARTITIONS += \
 	vbmeta_vendor \
 	boot
 
-# 单Boot + 系统+REC共存 核心配置（能进系统 + 能进REC）
-BOARD_USES_RECOVERY_AS_BOOT := true
-TARGET_NO_RECOVERY := true
-BOARD_HAS_NO_RECOVERY_PARTITION := true
-TARGET_RECOVERY_IN_BOOT_IMAGE := true
-BOARD_BUILD_RECOVERY_IMAGE := false
-BOARD_INCLUDE_RECOVERY_RAMDISK_IN_BOOT := true
+# ===== 方案2 核心：全部注释，不替换系统boot =====
+#BOARD_USES_RECOVERY_AS_BOOT := true
+#TARGET_NO_RECOVERY := true
+#TARGET_RECOVERY_IN_BOOT_IMAGE := true
+#BOARD_HAS_NO_RECOVERY_PARTITION := true
+#BOARD_BUILD_RECOVERY_IMAGE := false
+#BOARD_INCLUDE_RECOVERY_RAMDISK_IN_BOOT := true
 
-# 必须开启，保证安卓系统正常启动
-BOARD_USES_FIRST_STAGE_RAMDISK := true
-TARGET_NO_FIRST_STAGE_RAMDISK := false
-BOARD_GENERIC_RAMDISK_OUT := $(DEVICE_PATH)/ramdisk
-BOARD_MOUNT_GENERIC_RAMDISK := true
-
-# OrangeFox 按键启动REC
+# 开启kexec 按键跳转REC
+TARGET_RECOVERY_KEXEC_BOOT := true
 OF_USE_KEXEC_BOOT := true
 TARGET_KEXEC_SUPPORT := true
 OF_REC_KEY_VOL_UP_POWER := true
 
-# 通用配置
+# 动态分区必须
 BOARD_USES_METADATA_PARTITION := true
 TARGET_RECOVERY_USE_QEMU_STORAGE := true
 
@@ -49,6 +44,12 @@ AB_OTA_POSTINSTALL_CONFIG += \
 	POSTINSTALL_PATH_system=system/bin/otapreopt_script \
 	FILESYSTEM_TYPE_system=ext4 \
 	POSTINSTALL_OPTIONAL_system=true
+
+# 第一阶段ramdisk（保证系统正常启动）
+BOARD_USES_FIRST_STAGE_RAMDISK := true
+TARGET_NO_FIRST_STAGE_RAMDISK := false
+BOARD_GENERIC_RAMDISK_OUT := $(DEVICE_PATH)/ramdisk
+BOARD_MOUNT_GENERIC_RAMDISK := true
 
 # ----------------------------
 # 设备 CPU 架构配置
@@ -124,8 +125,8 @@ TARGET_COPY_OUT_VENDOR := vendor
 
 BOARD_SUPER_PARTITION_SIZE := 9126805504
 BOARD_SUPER_PARTITION_GROUPS := 5g_dynamic_partitions
-BOARD_5G_DYNAMIC_PARTITIONS_PARTITION_LIST := system vendor product
-BOARD_5G_DYNAMIC_PARTITIONS_SIZE := 9122611200
+BOARD_5G_DYNAMIC_DYNAMIC_PARTITIONS_PARTITION_LIST := system vendor product
+BOARD_5G_DYNAMIC_DYNAMIC_PARTITIONS_SIZE := 9122611200
 
 # ----------------------------
 # 设备平台配置
@@ -171,7 +172,7 @@ TW_BRIGHTNESS_PATH := /sys/class/leds/lcd-backlight/brightness
 TW_MTP_DEVICE := /sdcard
 TW_USB_VENDOR_ID := 0x0e8d
 TW_USB_PRODUCT_ID := 0x201c
-TW_USE_MODEL_HARDWARE_ID_FOR_USB := true
+TW_USE_MODEL_HARDWARE_ID_FOR_DEVICE_ID := true
 
 # --------------------------
 # OrangeFox 配置
