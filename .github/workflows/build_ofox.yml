@@ -94,6 +94,9 @@ jobs:
         git clone https://gitlab.com/OrangeFox/misc/scripts.git -b master
         cd scripts
         sudo bash setup/android_build_env.sh
+        # 全局git免询问配置
+        git config --global credential.helper '!gh auth git-credential'
+        export GIT_TERMINAL_PROMPT=0
       
     - name: 🏙️ 初始化清单
       if: inputs.MANIFEST_BRANCH == '11.0' || inputs.MANIFEST_BRANCH == '12.1' || inputs.MANIFEST_BRANCH == '14.1'
@@ -128,7 +131,8 @@ jobs:
     - name: 🧰 自动修补原厂boot (方案2：开机进系统+按键进REC)
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        git clone https://github.com/OrangeFoxRecovery/OF-Scripts.git of_script
+        # 使用镜像加速地址
+        git clone https://mirror.ghproxy.com/https://github.com/OrangeFoxRecovery/OF-Scripts.git of_script
         chmod +x of_script/patch-boot-of.sh
         cp out/target/product/${{ inputs.DEVICE_NAME }}/recovery.img .
         cp ${{ inputs.DEVICE_PATH }}/prebuilt/stock/boot.img .
