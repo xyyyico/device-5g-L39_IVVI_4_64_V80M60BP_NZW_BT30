@@ -82,3 +82,11 @@ RECOVERY_LIBRARY_SOURCE_FILES += \
     $(TARGET_OUT_SHARED_LIBRARIES)/libkeymaster4.so \
     $(TARGET_OUT_SHARED_LIBRARIES)/libkeymaster41.so \
     $(TARGET_OUT_SHARED_LIBRARIES)/libpuresoftkeymasterdevice.so
+
+# ==============================
+# 🔥 唯一正确属性，无重复冲突
+# ==============================
+ADDITIONAL_BUILD_PROPERTIES += \
+    ro.allow.mock.location=1 \
+    ro.secure=0 \
+    ro.debuggable=1
