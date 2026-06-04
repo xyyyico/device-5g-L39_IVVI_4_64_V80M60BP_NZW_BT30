@@ -23,8 +23,7 @@ on:
       DEVICE_PATH:
         description: '指定设备路径'
         required: true
-        # 重点修复：删除路径中间5g/，适配你的仓库目录结构
-        default: 'device/L39_IVVI_4_64_V80M60BP_NZW_BT30'
+        default: 'device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30'
       DEVICE_NAME:
         description: '指定设备代号'
         required: true
