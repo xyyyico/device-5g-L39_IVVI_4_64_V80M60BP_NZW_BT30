@@ -22,17 +22,15 @@ $(call inherit-product, device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30/device.mk)
 # ======================
 PRODUCT_DEVICE := L39_IVVI_4_64_V80M60BP_NZW_BT30
 PRODUCT_NAME := twrp_L39_IVVI_4_64_V80M60BP_NZW_BT30
-PRODUCT_BRAND := 5G
+PRODUCT_BRAND := IVVI
 PRODUCT_MODEL := 20221212A
-PRODUCT_MANUFACTURER := 5g
+PRODUCT_MANUFACTURER := IVVI
 
 # ======================
-# TWRP 公共配置（TAB缩进）
+# TWRP 公共配置【重点修改】
 # ======================
-ifeq ($(TARGET_BUILD_RECOVERY_IMAGE),true)
-	# 下一行开头必须是【TAB】，不能是空格！
-	$(call inherit-product, bootable/recovery/config/omni_twrp_common.mk)
-endif
+# 标准TWRP通用引入，删掉ifeq判断，Action自动识别编译rec
+$(call inherit-product, vendor/twrp/config/common.mk)
 
 # 系统指纹（用于系统验证）
-BUILD_FINGERPRINT := 5G/20221212A/L39:11/RP1A.200720.011/1708419017:user/release-keys
+BUILD_FINGERPRINT := IVVI/20221212A/L39:11/RP1A.200720.011/1708419017:user/release-keys
