@@ -5,34 +5,80 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# 定义当前设备树所在路径（固定不变）
 LOCAL_PATH := device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30
 
-# --------------------------
-# A/B 分区 OTA 升级配置
-# --------------------------
-# A/B 系统 OTA 升级后优化脚本配置
+# Recovery UI
+TARGET_SCREEN_WIDTH := 720
+TARGET_SCREEN_HEIGHT := 1600
+
+# Virtual A/B
+ENABLE_VIRTUAL_AB := true
+$(call inherit-product, $(SRC_TARGET_DIR)/product/virtual_ab_ota.mk)
+
+# VNDK
+PRODUCT_TARGET_VNDK_VERSION := 31
+
+# API
+PRODUCT_SHIPPING_API_LEVEL := 31
+
+# Dynamic Partitions
+PRODUCT_USE_DYNAMIC_PARTITIONS := true
+
+# Update Engine & Update Verifier
+PRODUCT_PACKAGES += \
+    update_engine \
+    update_verifier \
+    update_engine_sideload
+
+PRODUCT_PACKAGES_DEBUG += \
+    update_engine_client
+
+# A/B
 AB_OTA_POSTINSTALL_CONFIG += \
-	RUN_POSTINSTALL_system=true \
-	POSTINSTALL_PATH_system=system/bin/otapreopt_script \
-	FILESYSTEM_TYPE_system=ext4 \
-	POSTINSTALL_OPTIONAL_system=true
+    RUN_POSTINSTALL_system=true \
+    POSTINSTALL_PATH_system=system/bin/otapreopt_script \
+    FILESYSTEM_TYPE_system=ext4 \
+    POSTINSTALL_OPTIONAL_system=true
 
-# --------------------------
-# 启动控制 HAL 服务（A/B 分区必须）
-# Android 12 兼容稳定版
-# --------------------------
 PRODUCT_PACKAGES += \
-	android.hardware.boot@1.0-impl \
-	android.hardware.boot@1.0-service \
-	bootctrl.mt6768
+    otapreopt_script \
+    cppreopts.sh
 
-# --------------------------
-# A/B 分区 OTA 升级核心组件
-# --------------------------
+# Boot control HAL
 PRODUCT_PACKAGES += \
-	otapreopt_script \
-	cppreopts.sh \
-	update_engine \
-	update_verifier \
-	update_engine_sideload
+    android.hardware.boot@1.2-impl \
+    android.hardware.boot@1.2-impl.recovery \
+    android.hardware.boot@1.2-service
+
+PRODUCT_PACKAGES_DEBUG += \
+    bootctrl
+
+PRODUCT_PACKAGES += \
+    bootctrl.mt6768 \
+    bootctrl.mt6768.recovery
+
+# Health HAL
+PRODUCT_PACKAGES += \
+    android.hardware.health@2.1-impl \
+    android.hardware.health@2.1-service \
+    libhealthd.$(PRODUCT_PLATFORM)
+
+# Fastbootd
+PRODUCT_PACKAGES += \
+    android.hardware.fastboot@1.1-impl-mock \
+    fastbootd
+
+# MTK PlPath Utils
+PRODUCT_PACKAGES += \
+    mtk_plpath_utils.recovery
+
+# Additional Libraries
+TARGET_RECOVERY_DEVICE_MODULES += \
+    libkeymaster4 \
+    libkeymaster41 \
+    libpuresoftkeymasterdevice
+
+RECOVERY_LIBRARY_SOURCE_FILES += \
+    $(TARGET_OUT_SHARED_LIBRARIES)/libkeymaster4.so \
+    $(TARGET_OUT_SHARED_LIBRARIES)/libkeymaster41.so \
+    $(TARGET_OUT_SHARED_LIBRARIES)/libpuresoftkeymasterdevice.so
