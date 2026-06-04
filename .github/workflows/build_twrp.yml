@@ -14,15 +14,15 @@ on:
       DEVICE_TREE_URL:
         description: 'DEVICE_TREE_URL'
         required: true
-        default: 'https://github.com/arunv18p/android_device_xiaomi_earth_recovery'
+        default: 'https://https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30.git'
       DEVICE_TREE_BRANCH:
         description: 'DEVICE_TREE_BRANCH'
         required: true
-        default: 'twrp-12.1'
+        default: 'main'
       DEVICE_PATH:
         description: 'DEVICE_PATH'
         required: true
-        default: 'device/xiaomi/earth'
+        default: 'device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30'
       COMMON_TREE_URL:
         description: 'COMMON_TREE_URL (if no common tree, leave blank)'
         required: false
@@ -32,11 +32,11 @@ on:
       DEVICE_NAME:
         description: 'DEVICE_NAME'
         required: true
-        default: 'earth'
+        default: 'L39_IVVI_4_64_V80M60BP_NZW_BT30'
       MAKEFILE_NAME:
         description: 'MAKEFILE_NAME'
         required: true
-        default: 'twrp_earth'
+        default: 'twrp_L39_IVVI_4_64_V80M60BP_NZW_BT30'
       BUILD_TARGET:
         description: 'BUILD_TARGET'
         required: true
