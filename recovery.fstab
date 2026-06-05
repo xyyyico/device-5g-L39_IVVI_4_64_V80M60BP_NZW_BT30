@@ -1,25 +1,14 @@
-# 逻辑动态分区
 /system                   ext4     system                                                   flags=display=system;logical;slotselect
 /vendor                   ext4     vendor                                                   flags=display=vendor;logical;slotselect
 /product                  ext4     product                                                  flags=display=product;logical;slotselect
-
-# metadata
 /metadata                 ext4     /dev/block/platform/bootdevice/by-name/md_udc            flags=display=metadata
-
-# data 分区（修复）
-/data                     ext4     /dev/block/platform/bootdevice/by-name/userdata          flags=display=data;encryptable=metadata
-
-# MTK 私有分区
+/data                     ext4     /dev/block/platform/bootdevice/by-name/userdata          flags=display=data
 /mnt/vendor/protect_f     ext4     /dev/block/platform/bootdevice/by-name/protect1          flags=display=protect_f
 /mnt/vendor/protect_s     ext4     /dev/block/platform/bootdevice/by-name/protect2          flags=display=protect_s
 /mnt/vendor/nvdata        ext4     /dev/block/platform/bootdevice/by-name/nvdata            flags=display=nvdata
 /mnt/vendor/nvcfg         ext4     /dev/block/platform/bootdevice/by-name/nvcfg             flags=display=nvcfg
-
-# 自动挂载
 auto                      auto     /devices/platform/externdevice*                          flags=display=auto
 auto                      vfat     /devices/platform/mt_usb*                                flags=display=auto
-
-# 物理分区
 /persistent               emmc     /dev/block/platform/bootdevice/by-name/frp               flags=display=persistent
 /nvram                    emmc     /dev/block/platform/bootdevice/by-name/nvram             flags=display=nvram
 /proinfo                  emmc     /dev/block/platform/bootdevice/by-name/proinfo           flags=display=proinfo
