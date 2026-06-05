@@ -157,17 +157,25 @@ jobs:
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
     # =================================================================
-    # ✅ 以下为【只追加】的流程：自动注入TWRP到原厂boot
+    # ✅ 自动注入TWRP ramdisk → 原厂boot（方案二：源码编译magiskboot）
     # =================================================================
     - name: Download stock boot.img
       run: |
         wget -O ${{ steps.pwd.outputs.workspace-folder }}/stock_boot.img https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30/releases/download/stock/boot.img
 
-    - name: Install magiskboot
+    - name: Build magiskboot from source (PinNaCode)
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}
-        wget https://github.com/topjohnwu/Magisk/releases/download/v27.0/magiskboot
+        sudo apt update -y
+        sudo apt install -y git cmake ninja-build clang
+        git clone https://github.com/PinNaCode/magiskboot_build.git
+        cd magiskboot_build
+        CC=clang CXX=clang++ cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DPREFER_STATIC_LINKING=ON
+        cmake --build build -j$(nproc)
+        cp build/magiskboot ../
+        cd ..
         chmod +x magiskboot
+        rm -rf magiskboot_build
 
     - name: Unpack TWRP & stock boot
       run: |
@@ -185,8 +193,6 @@ jobs:
       run: |
         cd ${{ steps.pwd.outputs.workspace-folder }}
         ./magiskboot repack stock_boot.img boot_injected_twrp.img
-    # =================================================================
-    # ✅ 追加结束
     # =================================================================
 
     - name: Upload to Release
