@@ -5,6 +5,18 @@
 DEVICE_PATH := device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30
 ALLOW_MISSING_DEPENDENCIES := true
 
+# ----------------------------
+# A/B 分区（修复报错）
+# ----------------------------
+AB_OTA_UPDATER := true
+AB_OTA_PARTITIONS += \
+    boot \
+    system \
+    vendor \
+    product \
+    vbmeta_system \
+    vbmeta_vendor
+
 # ----------------------------------------------------------------
 # 架构
 # ----------------------------------------------------------------
@@ -30,7 +42,6 @@ TARGET_NO_BOOTLOADER := true
 # 单 Ramdisk + A/B + Recovery 内嵌 Boot（核心！不会死循环）
 # ----------------------------------------------------------------
 TARGET_IS_AB_DEVICE := true
-AB_OTA_UPDATER := true
 BOARD_USES_RECOVERY_AS_BOOT := true
 TARGET_NO_RECOVERY := true
 BOARD_HAS_NO_RECOVERY_PARTITION := true
