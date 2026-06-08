@@ -8,21 +8,30 @@
 LOCAL_PATH := device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30
 
 # ------------------------------------------------------
-# 1. 基础配置
+# 1. 基础继承
 # ------------------------------------------------------
 $(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
 $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 $(call inherit-product, vendor/twrp/config/common.mk)
 
 # ------------------------------------------------------
-# 2. 平台
+# 2. 设备标识（必须，否则 lunch 不认）
+# ------------------------------------------------------
+PRODUCT_DEVICE := L39_IVVI_4_64_V80M60BP_NZW_BT30
+PRODUCT_NAME := twrp_L39_IVVI_4_64_V80M60BP_NZW_BT30
+PRODUCT_BRAND := 5G
+PRODUCT_MODEL := 20221212A
+PRODUCT_MANUFACTURER := 5g
+
+# ------------------------------------------------------
+# 3. 平台
 # ------------------------------------------------------
 TARGET_BOARD_PLATFORM := mt6768
 BOARD_USES_MTK_HARDWARE := true
 BOARD_HAS_MTK_HARDWARE := true
 
 # ------------------------------------------------------
-# 3. A/B + 动态分区
+# 4. A/B + 动态分区
 # ------------------------------------------------------
 AB_OTA_UPDATER := true
 AB_OTA_PARTITIONS += \
@@ -42,14 +51,15 @@ AB_OTA_POSTINSTALL_CONFIG += \
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
 # ------------------------------------------------------
-# 4. Boot HAL
+# 5. Boot HAL（MT6768 稳定写法）
 # ------------------------------------------------------
 PRODUCT_PACKAGES += \
-    android.hardware.boot@1.1-impl-recovery \
-    android.hardware.boot@1.1-service
+    android.hardware.boot@1.0-impl \
+    android.hardware.boot@1.0-service \
+    bootctrl.mt6768
 
 # ------------------------------------------------------
-# 5. OTA
+# 6. OTA
 # ------------------------------------------------------
 PRODUCT_PACKAGES += \
     otapreopt_script \
@@ -59,7 +69,7 @@ PRODUCT_PACKAGES += \
     update_engine_sideload
 
 # ------------------------------------------------------
-# 6. 工具
+# 7. Recovery 工具
 # ------------------------------------------------------
 PRODUCT_PACKAGES += \
     charger_res_images \
@@ -68,26 +78,31 @@ PRODUCT_PACKAGES += \
     tune2fs
 
 # ------------------------------------------------------
-# 7. 单 ramdisk 自动模式 → 不手动复制 init
+# 8. 拷贝 TWRP 关键文件到 ramdisk（非常重要）
 # ------------------------------------------------------
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/recovery/root/recovery.fstab:recovery/root/etc/recovery.fstab \
+    $(LOCAL_PATH)/recovery/root/init.recovery.mt6768.rc:recovery/root/init.recovery.rc
 
-# ------------------------------------------------------
-# 8. fstab 启用（你已经有 fstab.mt6768）
-# ------------------------------------------------------
+# 系统 fstab（你原来的）
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/fstab.mt6768:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6768
 
 # ------------------------------------------------------
-# 9. 属性
+# 9. 系统属性
 # ------------------------------------------------------
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.hardware=mt6768 \
     ro.mediatek.platform=mt6768
 
 # ------------------------------------------------------
-# 10. 编译优化
+# 10. 64位 & AAPT
 # ------------------------------------------------------
 PRODUCT_AAPT_CONFIG := normal
 PRODUCT_AAPT_PREF_CONFIG := xhdpi
 TARGET_SUPPORTS_64_BIT_APPS := true
+
+# ------------------------------------------------------
+# 11. 编译容错（MTK 常用）
+# ------------------------------------------------------
 BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
