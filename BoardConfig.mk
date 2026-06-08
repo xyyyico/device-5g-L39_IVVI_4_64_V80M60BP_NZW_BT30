@@ -103,11 +103,18 @@ BOARD_AVB_VBMETA_SYSTEM := false
 BOARD_AVB_VBMETA_VENDOR := false
 
 # ----------------------------------------------------------------
+# LZ4 强力压缩 Ramdisk（不删减其他功能）
+# ----------------------------------------------------------------
+BOARD_RAMDISK_COMPRESSION_METHOD := lz4
+BOARD_RAMDISK_COMPRESSION_LEVEL := 12
+TW_SKIP_COMPRESSION_SUPPORT := true
+
+# ----------------------------------------------------------------
 # TWRP 基础功能
 # ----------------------------------------------------------------
 TW_THEME := portrait_hdpi
-TW_EXTRA_LANGUAGES := true
-TW_DEFAULT_LANGUAGE := zh_CN
+TW_EXTRA_LANGUAGES := false         # 关闭多余语言，仅保留中英
+TW_DEFAULT_LANGUAGE := zh_CN       # 默认中文
 TW_INPUT_BLACKLIST := "hbtp_vm"
 TW_BRIGHTNESS_PATH := /sys/class/leds/lcd-backlight/brightness
 TW_MAX_BRIGHTNESS := 2047
