@@ -5,19 +5,25 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# 定义当前设备树所在路径（固定不变）
 LOCAL_PATH := device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30
 
-# ==============================================================
-# 平台 & MTK 硬件（MT6768 必须）
-# ==============================================================
+# ------------------------------------------------------
+# 1. 基础配置
+# ------------------------------------------------------
+$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
+$(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
+$(call inherit-product, vendor/twrp/config/common.mk)
+
+# ------------------------------------------------------
+# 2. 平台
+# ------------------------------------------------------
 TARGET_BOARD_PLATFORM := mt6768
 BOARD_USES_MTK_HARDWARE := true
 BOARD_HAS_MTK_HARDWARE := true
 
-# ==============================================================
-# A/B 分区 + 动态分区（你机型核心）
-# ==============================================================
+# ------------------------------------------------------
+# 3. A/B + 动态分区
+# ------------------------------------------------------
 AB_OTA_UPDATER := true
 AB_OTA_PARTITIONS += \
     system \
@@ -27,64 +33,61 @@ AB_OTA_PARTITIONS += \
     vbmeta_vendor \
     boot
 
-# A/B 系统 OTA 升级后优化脚本配置
 AB_OTA_POSTINSTALL_CONFIG += \
-	RUN_POSTINSTALL_system=true \
-	POSTINSTALL_PATH_system=system/bin/otapreopt_script \
-	FILESYSTEM_TYPE_system=ext4 \
-	POSTINSTALL_OPTIONAL_system=true
+    RUN_POSTINSTALL_system=true \
+    POSTINSTALL_PATH_system=system/bin/otapreopt_script \
+    FILESYSTEM_TYPE_system=ext4 \
+    POSTINSTALL_OPTIONAL_system=true
 
-# 动态分区
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
-# ==============================================================
-# 启动控制 HAL 服务（A/B 分区必须）
-# Android 12 兼容稳定版
-# ==============================================================
+# ------------------------------------------------------
+# 4. Boot HAL
+# ------------------------------------------------------
 PRODUCT_PACKAGES += \
-	android.hardware.boot@1.0-impl \
-	android.hardware.boot@1.0-service \
-	bootctrl.mt6768
+    android.hardware.boot@1.1-impl-recovery \
+    android.hardware.boot@1.1-service
 
-# ==============================================================
-# A/B 分区 OTA 升级核心组件
-# ==============================================================
+# ------------------------------------------------------
+# 5. OTA
+# ------------------------------------------------------
 PRODUCT_PACKAGES += \
-	otapreopt_script \
-	cppreopts.sh \
-	update_engine \
-	update_verifier \
-	update_engine_sideload
+    otapreopt_script \
+    cppreopts.sh \
+    update_engine \
+    update_verifier \
+    update_engine_sideload
 
-# ==============================================================
-# Recovery/TWRP/OrangeFox 文件复制（关键！否则脚本不进 ramdisk）
-# ==============================================================
+# ------------------------------------------------------
+# 6. 工具
+# ------------------------------------------------------
+PRODUCT_PACKAGES += \
+    charger_res_images \
+    resize2fs \
+    e2fsck \
+    tune2fs
+
+# ------------------------------------------------------
+# 7. 单 ramdisk 自动模式 → 不手动复制 init
+# ------------------------------------------------------
+
+# ------------------------------------------------------
+# 8. fstab 启用（你已经有 fstab.mt6768）
+# ------------------------------------------------------
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/recovery/root/init:root/init \
-    $(LOCAL_PATH)/recovery/root/init.orig:root/init.orig \
-    $(LOCAL_PATH)/recovery/root/init.recovery.mt6768.rc:root/init.recovery.rc
+    $(LOCAL_PATH)/fstab.mt6768:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6768
 
-# ==============================================================
-# fstab（如果有就复制，没有就先注释，编译会提示）
-# ==============================================================
-# PRODUCT_COPY_FILES += \
-#     $(LOCAL_PATH)/fstab.mt6768:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.mt6768
-
-# ==============================================================
-# 系统属性（基本）
-# ==============================================================
+# ------------------------------------------------------
+# 9. 属性
+# ------------------------------------------------------
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.hardware=mt6768 \
     ro.mediatek.platform=mt6768
 
-# ==============================================================
-# 64位 + AAPT 配置
-# ==============================================================
+# ------------------------------------------------------
+# 10. 编译优化
+# ------------------------------------------------------
 PRODUCT_AAPT_CONFIG := normal
 PRODUCT_AAPT_PREF_CONFIG := xhdpi
 TARGET_SUPPORTS_64_BIT_APPS := true
-
-# ==============================================================
-# 禁止 ELF 预编译报错（MTK 常用）
-# ==============================================================
 BUILD_BROKEN_ELF_PREBUILT_PRODUCT_COPY_FILES := true
