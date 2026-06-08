@@ -9,11 +9,9 @@ DEVICE_PATH := device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30
 ALLOW_MISSING_DEPENDENCIES := true
 
 # ----------------------------
-# A/B 分区 + Recovery内置Boot【保留原生AB配置】
+# A/B 分区 + 单 Ramdisk 核心（修复版）
 # ----------------------------
-# 启用 A/B 无缝更新【开启，本机AB机型不动】
 AB_OTA_UPDATER := true
-# 参与 A/B 升级的分区列表
 AB_OTA_PARTITIONS += \
 	system \
 	product \
@@ -22,22 +20,28 @@ AB_OTA_PARTITIONS += \
 	vbmeta_vendor \
 	boot
 
-# 无独立REC、REC内嵌boot核心配置
+# 【关键：单 Ramdisk + 无 Recovery 分区】
+TARGET_IS_AB_DEVICE := true
 BOARD_USES_RECOVERY_AS_BOOT := true
 TARGET_NO_RECOVERY := true
 BOARD_HAS_NO_RECOVERY_PARTITION := true
 TARGET_RECOVERY_IN_BOOT_IMAGE := true
-# 关键：开启recovery-from-boot补丁（双启必开，正常开机原生ramdisk，按键TWRP ramdisk）
-TW_INCLUDE_RECOVERY_FROM_BOOT_PATCH := true
-# 关闭单独REC镜像打包错误项
 BOARD_BUILD_RECOVERY_IMAGE := false
-BOARD_INCLUDE_RECOVERY_RAMDISK_IN_BOOT := true
 
-# 启用元数据分区（动态分区必须）
+# 【关闭双 ramdisk 模式，强制单 ramdisk】
+TW_INCLUDE_RECOVERY_FROM_BOOT_PATCH := false
+TW_SINGLE_RAMDISK := true
+
+# 【绝对禁止永远进 recovery】
+BOARD_ALWAYS_IN_RECOVERY := false
+TW_FORCE_RECOVERY := false
+TW_NO_REBOOT_RECOVERY := false
+
+# 动态分区必须
 BOARD_USES_METADATA_PARTITION := true
 TARGET_RECOVERY_USE_QEMU_STORAGE := true
 
-# A/B OTA后置脚本不变
+# A/B OTA
 AB_OTA_POSTINSTALL_CONFIG += \
 	RUN_POSTINSTALL_system=true \
 	POSTINSTALL_PATH_system=system/bin/otapreopt_script \
@@ -45,7 +49,7 @@ AB_OTA_POSTINSTALL_CONFIG += \
 	POSTINSTALL_OPTIONAL_system=true
 
 # ----------------------------------------------------------------
-# 第一阶段 ramdisk 配置
+# 第一阶段 ramdisk（保持你原生不变）
 # ----------------------------------------------------------------
 BOARD_USES_FIRST_STAGE_RAMDISK := true
 TARGET_NO_FIRST_STAGE_RAMDISK := false
@@ -133,18 +137,18 @@ TARGET_USERIMAGES_USE_EXT4 := true
 TARGET_USERIMAGES_USE_F2FS := true
 
 # ----------------------------
-# AVB配置：AB机型必须关闭AVB校验，否则刷入boot校验失败卡第一屏
+# AVB 保持关闭（你原生正确）
 # ----------------------------
 BOARD_AVB_ENABLE := false
 BOARD_AVB_MAKE_VBMETA_IMAGE_ARGS += --flags 3
 
-# 安全补丁防降级
+# 安全补丁
 PLATFORM_SECURITY_PATCH := 2099-12-31
 VENDOR_SECURITY_PATCH := 2099-12-31
 PLATFORM_VERSION := 16.1.0
 
 # ----------------------------
-# TWRP/OF配置不变
+# TWRP 配置
 # ----------------------------
 TW_THEME := portrait_hdpi
 TW_EXTRA_LANGUAGES := true
@@ -161,6 +165,10 @@ TW_MTP_DEVICE := /sdcard
 TW_USB_VENDOR_ID := 0x0e8d
 TW_USB_PRODUCT_ID := 0x201c
 TW_USE_MODEL_HARDWARE_ID_FOR_USB := true
+
+# A/B 专用（必须加）
+TW_AB_DEVICE := true
+TW_NO_AB_UPDATE_RECOVERY := true
 
 OF_MAINTAINER := xy
 OF_NO_ADDON := true
