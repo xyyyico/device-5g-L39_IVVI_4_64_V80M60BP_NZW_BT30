@@ -1,4 +1,3 @@
-最终完整版 BoardConfig.mk（直接复制替换）
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -50,25 +49,15 @@ AB_OTA_POSTINSTALL_CONFIG += \
 
 # ----------------------------------------------------------------
 # 第一阶段 ramdisk 修复配置（解决 Unable to parse vendor fstab）
-# 【已修正】删除无效 ramdisk 路径，适配你当前目录
 # ----------------------------------------------------------------
 # 使用第一阶段 ramdisk
 BOARD_USES_FIRST_STAGE_RAMDISK := true
 # 不关闭第一阶段 ramdisk
 TARGET_NO_FIRST_STAGE_RAMDISK := false
 
-# 禁用无效 ramdisk 旧路径（你设备没有此文件夹，防止编译报错）
-# BOARD_GENERIC_RAMDISK_OUT := $(DEVICE_PATH)/ramdisk
-# BOARD_MOUNT_GENERIC_RAMDISK := true
-
 # 【修复1】强制指定Recovery挂载配置文件
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery.fstab
 BOARD_RECOVERY_RAMDISK_FSTAB := $(DEVICE_PATH)/recovery.fstab
-
-# 【修复2】正确拷贝根目录fstab.mt6768到ramdisk（彻底修复fstab解析失败）
-PRODUCT_COPY_FILES += \
-    $(DEVICE_PATH)/fstab.mt6768:$(TARGET_COPY_OUT_RECOVERY)/first_stage_ramdisk/fstab.mt6768 \
-    $(DEVICE_PATH)/fstab.mt6768:$(TARGET_COPY_OUT_RECOVERY)/fstab.mt6768
 
 # ----------------------------
 # 设备 CPU 架构配置
@@ -285,12 +274,9 @@ OF_IGNORE_PROP_MISS := false
 TW_VIRTUAL_AB := false
 
 # --------------------------
-# SELinux 权限补丁（关键：dm虚拟块设备读写权限）
+# SELinux 权限补丁路径声明
 # --------------------------
 # 自定义Recovery sepolicy路径
 TARGET_RECOVERY_SEPOLICY := $(DEVICE_PATH)/sepolicy/recovery.te
 # 完整SELinux支持
 TW_FULL_SELINUX_SUPPORT := true
-# 拷贝cil权限规则到ramdisk
-PRODUCT_COPY_FILES += \
-    $(DEVICE_PATH)/sepolicy/recovery_sepolicy.cil:$(TARGET_COPY_OUT_RECOVERY)/root/sepolicy/recovery_sepolicy.cil
