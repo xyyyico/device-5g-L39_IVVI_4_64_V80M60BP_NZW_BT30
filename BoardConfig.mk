@@ -48,7 +48,7 @@ AB_OTA_POSTINSTALL_CONFIG += \
 	POSTINSTALL_OPTIONAL_system=true
 
 # ----------------------------------------------------------------
-# 第一阶段 ramdisk 配置（保证 boot 分区能正常启动安卓系统）
+# 第一阶段 ramdisk 修复配置（解决 Unable to parse vendor fstab）
 # ----------------------------------------------------------------
 # 使用第一阶段 ramdisk
 BOARD_USES_FIRST_STAGE_RAMDISK := true
@@ -58,6 +58,15 @@ TARGET_NO_FIRST_STAGE_RAMDISK := false
 BOARD_GENERIC_RAMDISK_OUT := $(DEVICE_PATH)/ramdisk
 # 挂载通用 ramdisk
 BOARD_MOUNT_GENERIC_RAMDISK := true
+
+# 【修复1】强制指定Recovery挂载配置文件
+TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery.fstab
+BOARD_RECOVERY_RAMDISK_FSTAB := $(DEVICE_PATH)/recovery.fstab
+
+# 【修复2】拷贝原厂mtk fstab到ramdisk，修复找不到fstab.mt6768、vintf清单缺失
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/ramdisk/fstab.mt6768:$(TARGET_COPY_OUT_RECOVERY)/first_stage_ramdisk/fstab.mt6768 \
+    $(DEVICE_PATH)/ramdisk/fstab.mt6768:$(TARGET_COPY_OUT_RECOVERY)/fstab.mt6768
 
 # ----------------------------
 # 设备 CPU 架构配置
@@ -164,55 +173,72 @@ BOARD_5G_DYNAMIC_PARTITIONS_PARTITION_LIST := system vendor product
 # 动态分区可用空间
 BOARD_5G_DYNAMIC_PARTITIONS_SIZE := 9122611200
 
+# 【修复3】开启super dm设备软链接生成，日志twrp.super.symlinks_created=true
+TWRP_SUPER_SYMLINKS := true
+orangefox.super.partition := true
+
 # ----------------------------
 # 设备平台配置
 # ----------------------------
 # 芯片平台：MT6768
 TARGET_BOARD_PLATFORM := mt6768
+# 标记联发科平台，加载MTK专属权限适配
+TARGET_MTK_PLATFORM := mt6768
+# MTK动态Super分区补丁开关
+BOARD_MTK_DYNAMIC_SUPER := true
 
 # ----------------------------
-# Recovery 文件系统支持
+# Recovery 文件系统挂载全局参数
 # ----------------------------
 # 支持 ext4 格式
 TARGET_USERIMAGES_USE_EXT4 := true
 # 支持 f2fs 格式
 TARGET_USERIMAGES_USE_F2FS := true
+# 【修复4】全局挂载参数，解决ext4 vendor权限拒绝
+BOARD_RECOVERY_MOUNT_OPTIONS := ro,seclabel,allow_discard,errors=reboot
 
 # ----------------------------
 # 安全补丁版本
-# ----------------------------
-VENDOR_SECURITY_PATCH := 2021-08-01
-
-# ----------------------------
-# AVB 安卓验证启动配置
-# ----------------------------
-# 启用 AVB 验证
-BOARD_AVB_ENABLE := true
-# AVB 编译参数
-BOARD_AVB_MAKE_VBMETA_IMAGE_ARGS += --flags 3
-
-# ----------------------------
-# 屏蔽版本回滚检测（Recovery 必须）
 # ----------------------------
 PLATFORM_SECURITY_PATCH := 2099-12-31
 VENDOR_SECURITY_PATCH := 2099-12-31
 PLATFORM_VERSION := 16.1.0
 
 # ----------------------------
-# TWRP 通用配置
+# AVB/Verity 核心修复（解决vendor Permission denied）
 # ----------------------------
-#  Recovery 主题：竖屏高清
+# 系统AVB保持开启
+BOARD_AVB_ENABLE := true
+BOARD_AVB_MAKE_VBMETA_IMAGE_ARGS += --flags 3
+# 【修复5】Recovery绕过dm-verity校验，彻底拦截挂载拒绝
+TW_IGNORE_AVB := true
+TW_NO_VERITY := true
+TW_ROLLBACK_IGNORE := true
+
+# 【修复6】允许Recovery修改系统属性，消除error code:0xb报错
+TW_ALTER_PROP_ALLOW_ALL := true
+
+# ----------------------------
+# TWRP 通用基础配置
+# ----------------------------
+# Recovery 主题：竖屏高清
 TW_THEME := portrait_hdpi
 # 支持多语言
 TW_EXTRA_LANGUAGES := true
-# 启动时关闭屏幕（防闪烁）
+# 启动黑屏防闪烁
 TW_SCREEN_BLANK_ON_BOOT := true
-# 屏蔽错误输入设备
+# 屏蔽异常触摸设备
 TW_INPUT_BLACKLIST := "hbtp_vm"
-# 使用 toolbox 工具集
+# 使用精简toolbox
 TW_USE_TOOLBOX := true
-# 包含镜像打包工具
+# 镜像解包打包工具
 TW_INCLUDE_REPACKTOOLS := true
+# 【修复7】内置logcat，解决sh: /system/bin/logcat: inaccessible
+TW_INCLUDE_LOGCAT := true
+# 文件系统修复工具
+TW_INCLUDE_FSCK_TOOLS := true
+# 内置vintf解析，修复找不到manifest
+TW_INCLUDE_VINTF := true
 
 # 屏幕亮度配置
 TW_MAX_BRIGHTNESS := 2047
@@ -220,21 +246,49 @@ TW_DEFAULT_BRIGHTNESS := 1024
 TW_BRIGHTNESS_PATH := /sys/class/leds/lcd-backlight/brightness
 
 # --------------------------
-# MTP 文件传输功能配置
+# MTP / OTG USB 修复（消除 E:Unknown File System: '/devices/platform/mt_usb*'）
 # --------------------------
-# MTP 默认挂载路径
+# MTP内置存储挂载路径
 TW_MTP_DEVICE := /sdcard
-# USB 厂商 ID（联发科）
+# MTK USB VID/PID
 TW_USB_VENDOR_ID := 0x0e8d
-# USB 产品 ID
 TW_USB_PRODUCT_ID := 0x201c
-# 使用硬件 ID 作为 USB 标识
 TW_USE_MODEL_HARDWARE_ID_FOR_USB := true
+# 【修复8】开启USB外置存储，关闭禁用开关
+TW_USB_STORAGE := true
+TW_NO_USB_STORAGE := false
+# MTK USB fstab规则过滤，消除未知文件系统警告
+TW_USB_FILTER_MTK := true
 
 # --------------------------
-# OrangeFox 恢复系统配置
+# OrangeFox 专属修复开关（匹配日志orangefox.*属性）
 # --------------------------
 # 维护者名称
 OF_MAINTAINER := xy
 # 不加载附加组件
 OF_NO_ADDON := true
+# 【修复9】开启权限替换，对应日志 ro.orangefox.substitute_permissions=1
+OF_SUBSTITUTE_PERMISSIONS := true
+# 【修复10】开机自动SELinux宽容模式，根除Permission denied
+OF_FORCE_PERMISSIVE_SELINUX := true
+# 【修复11】启用system_root模式，读取system/build.prop
+OF_USE_SYSTEM_ROOT := true
+# SAR分区兼容
+OF_PROPER_SAR := true
+# 强制加载vendor vintf清单文件
+OF_LOAD_VENDOR_VINTF := true
+# 忽略prop缺失告警，修复无法识别ROM
+OF_IGNORE_PROP_MISS := false
+# 日志Virtual_AB: no，关闭虚拟AB
+TW_VIRTUAL_AB := false
+
+# --------------------------
+# SELinux 权限补丁（关键：dm虚拟块设备读写权限）
+# --------------------------
+# 自定义Recovery sepolicy路径
+TARGET_RECOVERY_SEPOLICY := $(DEVICE_PATH)/sepolicy/recovery.te
+# 完整SELinux支持
+TW_FULL_SELINUX_SUPPORT := true
+# 拷贝cil权限规则到ramdisk
+PRODUCT_COPY_FILES += \
+    $(DEVICE_PATH)/sepolicy/recovery_sepolicy.cil:$(TARGET_COPY_OUT_RECOVERY)/root/sepolicy/recovery_sepolicy.cil
