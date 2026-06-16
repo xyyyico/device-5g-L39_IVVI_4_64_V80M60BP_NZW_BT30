@@ -5,8 +5,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# 定义当前设备树所在路径（固定不变）
-LOCAL_PATH := device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30
+# 定义当前设备树所在路径（标准变量 DEVICE_PATH）
+DEVICE_PATH := device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30
 
 # --------------------------
 # A/B 分区 OTA 升级配置
@@ -37,20 +37,22 @@ PRODUCT_PACKAGES += \
 	update_verifier \
 	update_engine_sideload
 
-# ====================== 新增修复拷贝项 ======================
+# ====================== 修复文件拷贝项（修正路径，无编译报错） ======================
 # 1. 将原厂fstab.mt6768复制到recovery ramdisk，解决 Unable to parse vendor fstab
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/fstab.mt6768:recovery/root/fstab.mt6768 \
-    $(LOCAL_PATH)/fstab.mt6768:recovery/root/first_stage_ramdisk/fstab.mt6768
+    $(DEVICE_PATH)/fstab.mt6768:recovery/root/fstab.mt6768 \
+    $(DEVICE_PATH)/fstab.mt6768:recovery/root/first_stage_ramdisk/fstab.mt6768
 
-# 2. 拷贝自定义recovery.fstab到recovery根目录
+# 2. 拷贝自定义recovery.fstab到recovery根目录（TWRP/OF标准读取路径）
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/recovery.fstab:recovery/root/etc/recovery.fstab
+    $(DEVICE_PATH)/recovery.fstab:recovery/root/recovery.fstab
 
-# 3. 【SELinux权限修复】新增sepolicy文件拷贝（后面给你recovery.te内容）
+# 3. 【SELinux权限修复】仅拷贝编译好的cil规则到ramdisk（.te编译阶段使用，无需打包进镜像）
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/sepolicy/recovery.te:recovery/root/sepolicy/recovery.te \
-    $(LOCAL_PATH)/sepolicy/recovery_sepolicy.cil:recovery/root/sepolicy/recovery_sepolicy.cil
+    $(DEVICE_PATH)/sepolicy/recovery_sepolicy.cil:recovery/root/sepolicy/recovery_sepolicy.cil
 
-# 4. 屏蔽USB OTG报错：过滤mt_usb自动挂载异常规则，recovery内替换fstab usb行
-# 5. AVB vbmeta绕过配套：复制空vbmeta补丁（可选，刷机用）
+# 4. MTK 补充：拷贝设备 vintf 清单，解决vendor分区vintf解析失败（按需保留）
+# PRODUCT_COPY_FILES += \
+#     $(DEVICE_PATH)/manifest.xml:recovery/root/vendor/etc/vintf/manifest.xml
+
+# 5. 屏蔽USB OTG报错配套、AVB vbmeta补丁拷贝区域（后续添加文件可在此扩展）
