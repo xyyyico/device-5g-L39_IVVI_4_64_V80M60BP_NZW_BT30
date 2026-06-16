@@ -1,208 +1,197 @@
-name: Recovery Build
+name: OrangeFox - 构建
+
+# Credits to:
+# https://github.com/TeamWin
+# https://gitlab.com/OrangeFox
+# https://github.com/azwhikaru for Recovery Builder Template
+# And all Contributors in every repositories I used
+# 调教说明
+# Lime优化与编辑修复
+# 在原有基础上添加对OF14.1的支持
 
 on:
   workflow_dispatch:
     inputs:
-      MANIFEST_URL:
-        description: 'MANIFEST_URL (if want to use SSH keys, use git@github.com:XXXXX)'
-        required: true
-        default: 'https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp'
       MANIFEST_BRANCH:
-        description: 'MANIFEST_BRANCH'
+        description: 'OrangeFox 版本'
         required: true
-        default: 'twrp-12.1'
-      DEVICE_TREE_URL:
-        description: 'DEVICE_TREE_URL'
+        default: '12.1'
+        type: choice
+        options:
+        - 14.1
+        - 12.1
+        - 11.0
+        - 10.0
+      DEVICE_TREE:
+        description: 'OrangeFox设备树'
         required: true
         default: 'https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30.git'
       DEVICE_TREE_BRANCH:
-        description: 'DEVICE_TREE_BRANCH'
+        description: 'OrangeFox设备树分支'
         required: true
         default: 'main'
       DEVICE_PATH:
-        description: 'DEVICE_PATH'
+        description: '指定设备路径'
         required: true
         default: 'device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30'
-      COMMON_TREE_URL:
-        description: 'COMMON_TREE_URL (if no common tree, leave blank)'
-        required: false
-      COMMON_PATH:
-        description: 'COMMON_PATH (if no common tree, leave blank)'
-        required: false
       DEVICE_NAME:
-        description: 'DEVICE_NAME'
+        description: '指定设备代号'
         required: true
         default: 'L39_IVVI_4_64_V80M60BP_NZW_BT30'
-      MAKEFILE_NAME:
-        description: 'MAKEFILE_NAME'
-        required: true
-        default: 'twrp_L39_IVVI_4_64_V80M60BP_NZW_BT30'
       BUILD_TARGET:
-        description: 'BUILD_TARGET'
+        description: '构建目标'
         required: true
         default: 'recovery'
+        type: choice
+        options:
+        - recovery
+        - boot
+      DN:
+        description: '设备名称'
+        required: true
+        default: 'IVVI L39'
+        type: string
+
+env:
+  # 消除Node.js20弃用警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
-    if: github.event.repository.owner.id == github.event.sender.id
-    runs-on: ubuntu-latest
+    name: 🏠 由 ${{ github.actor }} 构建REC
+    runs-on: ubuntu-22.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: write
     steps:
-    - name: Display Run Parameters
+    - name: 🧱 构建配置
       run: |
-        echo "::group::User Environment Variables"
-        echo "Manifest URL: ${{ github.event.inputs.MANIFEST_URL }}"
-        echo "Manifest Branch: ${{ github.event.inputs.MANIFEST_BRANCH }}"
-        echo "Device Tree URL: ${{ github.event.inputs.DEVICE_TREE_URL }}"
-        echo "Device Tree Branch: ${{ github.event.inputs.DEVICE_TREE_BRANCH }}"
-        echo "Device Path: ${{ github.event.inputs.DEVICE_PATH }}"
-        echo "Device Name: ${{ github.event.inputs.DEVICE_NAME }}"
-        echo "Makefile Name: ${{ github.event.inputs.MAKEFILE_NAME }}"
-        echo "Build Target: ${{ github.event.inputs.BUILD_TARGET }}.img"
-        echo "::endgroup::"
+        echo "构建配置"
+        echo "设备代号: ${{ inputs.DEVICE_NAME }}"
+        echo "设备名称: ${{ inputs.DN }}"
+        echo "OrangeFox版本: ${{ inputs.MANIFEST_BRANCH }}"
+        echo "指定设备路径: ${{ inputs.DEVICE_PATH }}"
+        echo "构建: ${{ inputs.BUILD_TARGET }}"
 
-    - name: Check Out
+    - name: ✅ 检出代码
       uses: actions/checkout@v4
-
-    - name: Cleanup
+              
+    - name: 🧹 仓库空间清理
       uses: rokibhasansagar/slimhub_actions@main
 
-    - name: Prepare the environment
-      run: |
-        sudo apt update && sudo apt upgrade -y
-        DEBIAN_FRONTEND=noninteractive sudo apt install -yq \
-            linux-modules-extra-$(uname -r) \
-            gperf gcc-multilib gcc-10-multilib g++-multilib g++-10-multilib \
-            libc6-dev lib32ncurses-dev x11proto-core-dev libx11-dev tree lib32z-dev libgl1-mesa-dev libxml2-utils \
-            xsltproc bc ccache lib32readline-dev lib32z1-dev liblz4-tool libncurses-dev libsdl1.2-dev \
-            build-essential libgtk-3-dev libglu1-mesa-dev freeglut3-dev git libxml2 lzop pngcrush schedtool squashfs-tools \
-            imagemagick libbz2-dev lzma ncftp qemu-user-static libstdc++-10-dev libncurses6 python3 tar wget
-
-    - name: Install OpenJDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '11'
-
-    - name: Setup SSH Keys
-      if: ${{ startsWith(github.event.inputs.MANIFEST_URL, 'git@github.com') || 
-          startsWith(github.event.inputs.DEVICE_TREE_URL, 'git@github.com') ||
-          startsWith(github.event.inputs.COMMON_TREE_URL, 'git@github.com') }}
-      uses: webfactory/ssh-agent@v0.9.0
-      with:
-          ssh-private-key: |
-            ${{ secrets.SSH_PRIVATE_KEY }}
-
-    - name: Install repo
-      run: |
-        mkdir ~/bin
-        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
-        chmod a+x ~/bin/repo
-        sudo ln -sf ~/bin/repo /usr/bin/repo
-
-    - name: Initialize repo
-      run: |
-        mkdir workspace
-        cd workspace
-        echo "workspace-folder=$(pwd)" >> $GITHUB_OUTPUT
-        git config --global user.name "Nico170420"
-        git config --global user.email "b170420nc@gmail.com"
-        repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
-      id: pwd
-
-    - name: Repo Sync
-      run: |
-        repo sync -j$(nproc --all) --force-sync
-      working-directory: workspace
-
-    - name: Clone device tree
-      run: |
-        git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
-
-    - name: Clone common tree
-      if: |
-        github.event.inputs.COMMON_TREE_URL != null
-        && github.event.inputs.COMMON_PATH != null
-      run: |
-        git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
-
-    - name: Check Build Tree
-      uses: haya14busa/action-cond@v1
-      id: buildtree
-      with:
-        cond: ${{ github.event.inputs.MANIFEST_BRANCH == 'twrp-11' || github.event.inputs.MANIFEST_BRANCH == 'twrp-12.1' }}
-        if_true: twrp
-        if_false: omni
-
-    - name: Sync Device Dependencies
-      run: |
-        bash ${GITHUB_WORKSPACE}/scripts/convert.sh ${{ github.event.inputs.DEVICE_PATH }}/${{ steps.buildtree.outputs.value }}.dependencies
-        repo sync -j$(nproc --all)
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
-      continue-on-error: true
-
-    - name: Set Swap Space
+    - name: 🚢 分配24G Swap内存（防止编译OOM）
       uses: pierotofy/set-swap-space@master
       with:
-        swap-size-gb: 12
-
-    - name: Building recovery
+        swap-size-gb: 24
+      
+    - name: 🤖 预装主机编译依赖（修复host_init_verifier缺失库）
       run: |
+        sudo apt update -y
+        sudo apt install aria2 clang libc++-dev libselinux1-dev libcap-dev libssl-dev -y
+        git clone https://gitlab.com/OrangeFox/misc/scripts.git -b master
+        cd scripts
+        sudo bash setup/android_build_env.sh
+      
+    - name: 🏙️ 初始化源码清单
+      if: inputs.MANIFEST_BRANCH == '11.0' || inputs.MANIFEST_BRANCH == '12.1' || inputs.MANIFEST_BRANCH == '14.1'
+      run: |
+        mkdir -p ${GITHUB_WORKSPACE}/OrangeFox
+        cd ${GITHUB_WORKSPACE}/OrangeFox
+        git config --global user.name "${{ github.actor }}"
+        git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+        git clone https://gitlab.com/OrangeFox/sync.git -b master
+        cd sync
+        ./orangefox_sync.sh --branch ${{ inputs.MANIFEST_BRANCH }} --path ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+
+    - name: 🌳 克隆设备树
+      run: |
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        git clone ${{ inputs.DEVICE_TREE }} -b ${{ inputs.DEVICE_TREE_BRANCH }} ./${{ inputs.DEVICE_PATH }}
+        cd ${{ inputs.DEVICE_PATH }}
+        echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+    # ========== 关键修复：编译前清空out目录，彻底删除sepolicy残留文件夹 ==========
+    - name: 🧹 清空旧编译输出，解决sepolicy目录冲突
+      run: |
+        FOX_ROOT=${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        rm -rf ${FOX_ROOT}/out
+        mkdir -p ${FOX_ROOT}/out
+
+    - name: 🦊 构建OrangeFox（输出完整编译日志）
+      run: |
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         source build/envsetup.sh
+        # 修复原脚本拼写错误 DEPENDCIES → DEPENDENCIES
         export ALLOW_MISSING_DEPENDENCIES=true
-        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
-      working-directory: ${{ steps.pwd.outputs.workspace-folder }}
+        export FOX_BUILD_TYPE=Official
+        export SKIP_HOST_TOOLS=false
+        lunch twrp_${{ inputs.DEVICE_NAME }}-eng
+        # 日志写入文件，失败可下载查看util.cpp完整clang报错
+        mka ${{ inputs.BUILD_TARGET }}image -j$(nproc) 2>&1 | tee ${GITHUB_WORKSPACE}/build_full_log.txt
+      shell: bash
 
-    # =================================================================
-    # 自动注入TWRP到原厂boot —— 100%不报错版本
-    # =================================================================
-    - name: Download stock boot.img
-      run: |
-        wget -O ${{ steps.pwd.outputs.workspace-folder }}/stock_boot.img https://github.com/xyyyico/device-5g-L39_IVVI_4_64_V80M60BP_NZW_BT30/releases/download/stock/boot.img
-
-    - name: Install magiskboot (稳定不报错版)
-      run: |
-        cd ${{ steps.pwd.outputs.workspace-folder }}
-        sudo apt update
-        sudo apt install -y magiskboot
-        cp $(which magiskboot) ./magiskboot
-        chmod +x magiskboot
-
-    - name: Unpack TWRP & stock boot
-      run: |
-        cd ${{ steps.pwd.outputs.workspace-folder }}
-        mkdir -p twrp_dump stock_dump
-        ./magiskboot unpack out/target/product/${{ github.event.inputs.DEVICE_NAME }}/recovery.img twrp_dump/
-        ./magiskboot unpack stock_boot.img stock_dump/
-
-    - name: Inject TWRP ramdisk into stock boot
-      run: |
-        cd ${{ steps.pwd.outputs.workspace-folder }}
-        cp twrp_dump/ramdisk.cpio.gz stock_dump/recovery-from-boot.p
-
-    - name: Repack final boot image
-      run: |
-        cd ${{ steps.pwd.outputs.workspace-folder }}
-        ./magiskboot repack stock_boot.img boot_injected_twrp.img
-    # =================================================================
-
-    - name: Upload to Release
-      uses: softprops/action-gh-release@v2
+    # 构建失败自动上传编译日志用于排查
+    - name: 📤 上传编译日志（构建失败时可用）
+      uses: actions/upload-artifact@v4
+      if: always()
       with:
-        files: |
-          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/${{ github.event.inputs.BUILD_TARGET }}.img
-          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*.zip
-          workspace/out/target/product/${{ github.event.inputs.DEVICE_NAME }}/*vendor*.img
-          workspace/boot_injected_twrp.img
-        name: ${{ github.event.inputs.DEVICE_NAME }}-${{ github.run_id }}
+        name: build-log-file
+        path: ${{ github.workspace }}/build_full_log.txt
+
+    - name: 💿 整理镜像
+      run: |
+        mkdir -p ${GITHUB_WORKSPACE}/upload_artifacts
+
+        FOX_DIR="${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}"
+        OUT_DIR="${FOX_DIR}/out/target/product/${{ inputs.DEVICE_NAME }}"
+
+        echo "🔍 正在从以下绝对路径搜寻文件："
+        echo "$OUT_DIR"
+
+        if [ ! -d "$OUT_DIR" ]; then
+            echo "❌ 严重错误：输出目录不存在！"
+            echo "可能是 inputs.DEVICE_NAME (${{ inputs.DEVICE_NAME }}) 不对，或者 Manifest 分支不对。"
+            exit 1
+        fi
+
+        find "$OUT_DIR" -maxdepth 1 -name "*.img" -exec cp {} ${GITHUB_WORKSPACE}/upload_artifacts/ \;
+        find "$OUT_DIR" -maxdepth 1 -name "*.zip" -exec cp {} ${GITHUB_WORKSPACE}/upload_artifacts/ \;
+
+        if [ -z "$(ls -A ${GITHUB_WORKSPACE}/upload_artifacts/)" ]; then
+           echo "❌ 未寻找到镜像，请检查BoardConfig.mk或设备树配置"
+           exit 1
+        else
+           echo "✅ 找到文件"
+           ls -R ${GITHUB_WORKSPACE}/upload_artifacts/
+        fi
+
+    - name: 🧶 设置发行版参数
+      run: |
+        echo "BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)" >> $GITHUB_ENV
+        
+        DEVICE_TREE_URL="${{ inputs.DEVICE_TREE }}"
+        if [[ "${DEVICE_TREE_URL}" == *.git ]]; then
+          DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
+        fi
+        echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
+
+    - name: 🎥 上传至发行版
+      uses: softprops/action-gh-release@v2
+      if: success()
+      with:
+        files: upload_artifacts/*
+        name: ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
-          Manifest: ${{ github.event.inputs.MANIFEST_BRANCH }}
-          Device: ${{ github.event.inputs.DEVICE_NAME }}
-          Target: ${{ github.event.inputs.BUILD_TARGET }}.img
-          ✅ boot_injected_twrp.img 已内置TWRP，可直刷双启
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          <h1 align="center">
+            <img src="https://orangefox.download/fox.svg" height="40" style="vertical-align:bottom"/> 
+            OrangeFox ${{ inputs.MANIFEST_BRANCH }}
+          </h1>
+          🚀 构建: ${{ github.run_id }}<br>
+          📱 设备: ${{ inputs.DN }}<br>
+          🔢 设备代号: ${{ inputs.DEVICE_NAME }}<br>
+          🦊 OrangeFox版本: ${{ inputs.MANIFEST_BRANCH }}<br>
+          📅 构建日期: ${{ env.BUILD_DATE }}<br>
+          <br>
+          <strong>✅ 状态: 构建成功 (Build Successfully)</strong>
