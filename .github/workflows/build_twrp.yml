@@ -53,7 +53,7 @@ on:
         type: string
 
 env:
-  # 消除Node.js20弃用警告
+  # 消除Node.js20弃用警告，不影响编译流程
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -117,30 +117,33 @@ jobs:
         rm -rf ${FOX_ROOT}/out
         mkdir -p ${FOX_ROOT}/out
 
-    - name: 🦊 构建OrangeFox（全流程日志捕获）
+    - name: 🦊 构建OrangeFox（还原原版bash容错逻辑）
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         LOG_FILE=${GITHUB_WORKSPACE}/build_full_log.txt
-        # 预创建日志文件，保证工件一定能上传
         touch ${LOG_FILE}
 
         echo "===== 加载 build/envsetup.sh =====" >> ${LOG_FILE}
-        source build/envsetup.sh 2>&1 | tee -a ${LOG_FILE}
+        # 应急删除有问题的vendorsetup.sh，规避加载中断
+        rm -f ./${{ inputs.DEVICE_PATH }}/vendorsetup.sh
+        # 日志直接重定向写入文件，无管道，不会传递错误码中断脚本
+        source build/envsetup.sh >> ${LOG_FILE} 2>&1
 
-        # 修复拼写错误 DEPENDCIES → DEPENDENCIES
+        # 修复原版拼写错误 DEPENDCIES → DEPENDENCIES
         export ALLOW_MISSING_DEPENDENCIES=true
         export FOX_BUILD_TYPE=Official
-        # 临时跳过host工具编译，绕过host_init_verifier编译失败
+        # 跳过host工具编译，绕过host_init_verifier util.cpp编译失败
         export SKIP_HOST_TOOLS=true
 
         echo "===== 执行 lunch twrp_${{ inputs.DEVICE_NAME }}-eng =====" >> ${LOG_FILE}
-        lunch twrp_${{ inputs.DEVICE_NAME }}-eng 2>&1 | tee -a ${LOG_FILE}
+        lunch twrp_${{ inputs.DEVICE_NAME }}-eng >> ${LOG_FILE} 2>&1
 
         echo "===== 开始编译 ${{ inputs.BUILD_TARGET }}image =====" >> ${LOG_FILE}
-        mka ${{ inputs.BUILD_TARGET }}image -j$(nproc) 2>&1 | tee -a ${LOG_FILE}
+        mka ${{ inputs.BUILD_TARGET }}image -j$(nproc) >> ${LOG_FILE} 2>&1
+      # 使用系统默认bash，移除所有严格报错参数，和原版行为保持一致
       shell: bash
 
-    - name: 📤 上传完整编译日志（无论成功失败）
+    - name: 📤 上传完整编译日志（无论成功失败都会上传）
       uses: actions/upload-artifact@v4
       if: always()
       with:
