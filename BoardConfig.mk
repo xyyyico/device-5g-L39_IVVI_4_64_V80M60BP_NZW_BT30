@@ -1,3 +1,4 @@
+最终完整版 BoardConfig.mk（直接复制替换）
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -49,24 +50,25 @@ AB_OTA_POSTINSTALL_CONFIG += \
 
 # ----------------------------------------------------------------
 # 第一阶段 ramdisk 修复配置（解决 Unable to parse vendor fstab）
+# 【已修正】删除无效 ramdisk 路径，适配你当前目录
 # ----------------------------------------------------------------
 # 使用第一阶段 ramdisk
 BOARD_USES_FIRST_STAGE_RAMDISK := true
 # 不关闭第一阶段 ramdisk
 TARGET_NO_FIRST_STAGE_RAMDISK := false
-# 指定设备树中提供的 ramdisk 路径
-BOARD_GENERIC_RAMDISK_OUT := $(DEVICE_PATH)/ramdisk
-# 挂载通用 ramdisk
-BOARD_MOUNT_GENERIC_RAMDISK := true
+
+# 禁用无效 ramdisk 旧路径（你设备没有此文件夹，防止编译报错）
+# BOARD_GENERIC_RAMDISK_OUT := $(DEVICE_PATH)/ramdisk
+# BOARD_MOUNT_GENERIC_RAMDISK := true
 
 # 【修复1】强制指定Recovery挂载配置文件
 TARGET_RECOVERY_FSTAB := $(DEVICE_PATH)/recovery.fstab
 BOARD_RECOVERY_RAMDISK_FSTAB := $(DEVICE_PATH)/recovery.fstab
 
-# 【修复2】拷贝原厂mtk fstab到ramdisk，修复找不到fstab.mt6768、vintf清单缺失
+# 【修复2】正确拷贝根目录fstab.mt6768到ramdisk（彻底修复fstab解析失败）
 PRODUCT_COPY_FILES += \
-    $(DEVICE_PATH)/ramdisk/fstab.mt6768:$(TARGET_COPY_OUT_RECOVERY)/first_stage_ramdisk/fstab.mt6768 \
-    $(DEVICE_PATH)/ramdisk/fstab.mt6768:$(TARGET_COPY_OUT_RECOVERY)/fstab.mt6768
+    $(DEVICE_PATH)/fstab.mt6768:$(TARGET_COPY_OUT_RECOVERY)/first_stage_ramdisk/fstab.mt6768 \
+    $(DEVICE_PATH)/fstab.mt6768:$(TARGET_COPY_OUT_RECOVERY)/fstab.mt6768
 
 # ----------------------------
 # 设备 CPU 架构配置
@@ -173,7 +175,7 @@ BOARD_5G_DYNAMIC_PARTITIONS_PARTITION_LIST := system vendor product
 # 动态分区可用空间
 BOARD_5G_DYNAMIC_PARTITIONS_SIZE := 9122611200
 
-# 【修复3】开启super dm设备软链接生成，日志twrp.super.symlinks_created=true
+# 【修复3】开启super dm设备软链接生成，解决dm-0/dm-1链接失效
 TWRP_SUPER_SYMLINKS := true
 orangefox.super.partition := true
 
