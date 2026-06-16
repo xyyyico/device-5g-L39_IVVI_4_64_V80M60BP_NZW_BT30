@@ -1,3 +1,4 @@
+
 #
 # Copyright (C) 2026 The Android Open Source Project
 # Copyright (C) 2026 SebaUbuntu's TWRP device tree generator
@@ -37,7 +38,7 @@ PRODUCT_PACKAGES += \
 	update_verifier \
 	update_engine_sideload
 
-# ====================== 修复文件拷贝项（修正路径，无编译报错） ======================
+# ====================== 修复文件拷贝项 ======================
 # 1. 将原厂fstab.mt6768复制到recovery ramdisk，解决 Unable to parse vendor fstab
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/fstab.mt6768:recovery/root/fstab.mt6768 \
@@ -47,12 +48,6 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/recovery.fstab:recovery/root/recovery.fstab
 
-# 3. 【SELinux权限修复】仅拷贝编译好的cil规则到ramdisk（.te编译阶段使用，无需打包进镜像）
+# 3. 【SELinux权限修复】仅拷贝编译好的cil规则到ramdisk
 PRODUCT_COPY_FILES += \
     $(DEVICE_PATH)/sepolicy/recovery_sepolicy.cil:recovery/root/sepolicy/recovery_sepolicy.cil
-
-# 4. MTK 补充：拷贝设备 vintf 清单，解决vendor分区vintf解析失败（按需保留）
-# PRODUCT_COPY_FILES += \
-#     $(DEVICE_PATH)/manifest.xml:recovery/root/vendor/etc/vintf/manifest.xml
-
-# 5. 屏蔽USB OTG报错配套、AVB vbmeta补丁拷贝区域（后续添加文件可在此扩展）
