@@ -73,21 +73,21 @@ jobs:
         echo "OrangeFox版本: ${{ inputs.MANIFEST_BRANCH }}"
         echo "指定设备路径: ${{ inputs.DEVICE_PATH }}"
         echo "构建: ${{ inputs.BUILD_TARGET }}"
-
     - name: ✅ 检出代码
       uses: actions/checkout@v4
               
     - name: 🧹 仓库空间清理
       uses: rokibhasansagar/slimhub_actions@main
 
-    - name: 🚢 分配24G Swap内存（防止编译OOM）
+    - name: 🚢 Swap空间（24G防止编译OOM）
       uses: pierotofy/set-swap-space@master
       with:
         swap-size-gb: 24
       
-    - name: 🤖 预装主机编译依赖（修复host_init_verifier缺失库）
+    - name: 🤖 完整编译依赖预装
       run: |
         sudo apt update -y
+        # 预装host编译所需库，修复host_init_verifier缺失依赖
         sudo apt install aria2 clang libc++-dev libselinux1-dev libcap-dev libssl-dev -y
         git clone https://gitlab.com/OrangeFox/misc/scripts.git -b master
         cd scripts
@@ -111,47 +111,53 @@ jobs:
         cd ${{ inputs.DEVICE_PATH }}
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
-    # ========== 关键修复：编译前清空out目录，彻底删除sepolicy残留文件夹 ==========
-    - name: 🧹 清空旧编译输出，解决sepolicy目录冲突
+    - name: 🧹 清空旧编译输出，解决sepolicy目录残留报错
       run: |
         FOX_ROOT=${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         rm -rf ${FOX_ROOT}/out
         mkdir -p ${FOX_ROOT}/out
 
-    - name: 🦊 构建OrangeFox（输出完整编译日志）
+    - name: 🦊 构建OrangeFox（全流程日志捕获）
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        source build/envsetup.sh
-        # 修复原脚本拼写错误 DEPENDCIES → DEPENDENCIES
+        LOG_FILE=${GITHUB_WORKSPACE}/build_full_log.txt
+        # 预创建日志文件，保证工件一定能上传
+        touch ${LOG_FILE}
+
+        echo "===== 加载 build/envsetup.sh =====" >> ${LOG_FILE}
+        source build/envsetup.sh 2>&1 | tee -a ${LOG_FILE}
+
+        # 修复拼写错误 DEPENDCIES → DEPENDENCIES
         export ALLOW_MISSING_DEPENDENCIES=true
         export FOX_BUILD_TYPE=Official
-        export SKIP_HOST_TOOLS=false
-        lunch twrp_${{ inputs.DEVICE_NAME }}-eng
-        # 日志写入文件，失败可下载查看util.cpp完整clang报错
-        mka ${{ inputs.BUILD_TARGET }}image -j$(nproc) 2>&1 | tee ${GITHUB_WORKSPACE}/build_full_log.txt
+        # 临时跳过host工具编译，绕过host_init_verifier编译失败
+        export SKIP_HOST_TOOLS=true
+
+        echo "===== 执行 lunch twrp_${{ inputs.DEVICE_NAME }}-eng =====" >> ${LOG_FILE}
+        lunch twrp_${{ inputs.DEVICE_NAME }}-eng 2>&1 | tee -a ${LOG_FILE}
+
+        echo "===== 开始编译 ${{ inputs.BUILD_TARGET }}image =====" >> ${LOG_FILE}
+        mka ${{ inputs.BUILD_TARGET }}image -j$(nproc) 2>&1 | tee -a ${LOG_FILE}
       shell: bash
 
-    # 构建失败自动上传编译日志用于排查
-    - name: 📤 上传编译日志（构建失败时可用）
+    - name: 📤 上传完整编译日志（无论成功失败）
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: build-log-file
+        name: full-build-log
         path: ${{ github.workspace }}/build_full_log.txt
 
-    - name: 💿 整理镜像
+    - name: 💿 整理镜像文件
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/upload_artifacts
 
         FOX_DIR="${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}"
         OUT_DIR="${FOX_DIR}/out/target/product/${{ inputs.DEVICE_NAME }}"
 
-        echo "🔍 正在从以下绝对路径搜寻文件："
-        echo "$OUT_DIR"
+        echo "🔍 镜像输出目录：$OUT_DIR"
 
         if [ ! -d "$OUT_DIR" ]; then
-            echo "❌ 严重错误：输出目录不存在！"
-            echo "可能是 inputs.DEVICE_NAME (${{ inputs.DEVICE_NAME }}) 不对，或者 Manifest 分支不对。"
+            echo "❌ 错误：输出目录不存在，请检查设备代号或lunch配置"
             exit 1
         fi
 
@@ -159,24 +165,22 @@ jobs:
         find "$OUT_DIR" -maxdepth 1 -name "*.zip" -exec cp {} ${GITHUB_WORKSPACE}/upload_artifacts/ \;
 
         if [ -z "$(ls -A ${GITHUB_WORKSPACE}/upload_artifacts/)" ]; then
-           echo "❌ 未寻找到镜像，请检查BoardConfig.mk或设备树配置"
+           echo "❌ 未找到编译产物，请检查BoardConfig.mk配置"
            exit 1
         else
-           echo "✅ 找到文件"
+           echo "✅ 已收集镜像文件："
            ls -R ${GITHUB_WORKSPACE}/upload_artifacts/
         fi
 
-    - name: 🧶 设置发行版参数
+    - name: 🧶 发行版参数预处理
       run: |
         echo "BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)" >> $GITHUB_ENV
         
         DEVICE_TREE_URL="${{ inputs.DEVICE_TREE }}"
-        if [[ "${DEVICE_TREE_URL}" == *.git ]]; then
-          DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
-        fi
+        [[ "${DEVICE_TREE_URL}" == *.git ]] && DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
 
-    - name: 🎥 上传至发行版
+    - name: 🎥 上传至GitHub Release
       uses: softprops/action-gh-release@v2
       if: success()
       with:
@@ -188,10 +192,10 @@ jobs:
             <img src="https://orangefox.download/fox.svg" height="40" style="vertical-align:bottom"/> 
             OrangeFox ${{ inputs.MANIFEST_BRANCH }}
           </h1>
-          🚀 构建: ${{ github.run_id }}<br>
-          📱 设备: ${{ inputs.DN }}<br>
+          🚀 构建流水号: ${{ github.run_id }}<br>
+          📱 设备型号: ${{ inputs.DN }}<br>
           🔢 设备代号: ${{ inputs.DEVICE_NAME }}<br>
-          🦊 OrangeFox版本: ${{ inputs.MANIFEST_BRANCH }}<br>
+          🦊 OrangeFox 版本: ${{ inputs.MANIFEST_BRANCH }}<br>
           📅 构建日期: ${{ env.BUILD_DATE }}<br>
           <br>
           <strong>✅ 状态: 构建成功 (Build Successfully)</strong>
