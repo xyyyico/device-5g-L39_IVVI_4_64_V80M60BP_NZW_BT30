@@ -1,0 +1,25 @@
+# 允许recovery读写super dm虚拟块设备（修复vendor dm-1权限拒绝）
+allow recovery dm_device:blk_file rw_file_perms;
+allow recovery dm_sysfs:file rw_file_perms;
+allow recovery dm_sysfs:dir r_dir_perms;
+
+# 读取system/vendor/product ext4分区文件上下文
+allow recovery system_file:dir r_dir_perms;
+allow recovery system_file:file r_file_perms;
+allow recovery vendor_file:dir r_dir_perms;
+allow recovery vendor_file:file r_file_perms;
+allow recovery product_file:dir r_dir_perms;
+allow recovery product_file:file r_file_perms;
+
+# 允许修改ro.*系统属性，消除 error code:0xb
+allow recovery property_service:property_service set;
+
+# OTG USB外置存储读写权限
+allow recovery usb_device:chr_file rw_file_perms;
+allow recovery usbfs:file rw_file_perms;
+
+# 读取vintf manifest文件，解决找不到manifest_mt6768.xml
+allow recovery vendor_config_file:file r_file_perms;
+
+# logcat工具权限
+allow recovery logd_socket:sock_file rw_file_perms;
