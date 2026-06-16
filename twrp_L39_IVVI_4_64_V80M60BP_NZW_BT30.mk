@@ -36,3 +36,10 @@ endif
 
 # 系统指纹（用于系统验证）
 BUILD_FINGERPRINT := 5G/20221212A/L39:11/RP1A.200720.011/1708419017:user/release-keys
+
+# ========== 新增修复：修复 ro.build.fingerprint 只读 error code:0xb ==========
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.build.fingerprint=$(BUILD_FINGERPRINT) \
+    ro.product.device=$(PRODUCT_DEVICE) \
+    ro.product.model=$(PRODUCT_MODEL) \
+    ro.product.brand=$(PRODUCT_BRAND)
