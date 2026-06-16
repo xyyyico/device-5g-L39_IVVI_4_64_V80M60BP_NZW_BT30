@@ -14,9 +14,6 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/full_base_telephony.mk)
 # 加载设备device.mk配置
 $(call inherit-product, device/5g/L39_IVVI_4_64_V80M60BP_NZW_BT30/device.mk)
 
-# TWRP/OrangeFox 公共Recovery配置
-$(call inherit-product, bootable/recovery/config/omni_twrp_common.mk)
-
 # ======================
 # 设备基础信息
 # ======================
